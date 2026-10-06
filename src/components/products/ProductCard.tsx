@@ -1,15 +1,8 @@
 import type { Product } from "../../types/product.types";
 import { formatPrice } from "../../utils/formatPrice";
-import { Button } from "../ui/Button";
+import { AddToCartButton } from "../cart/AddToCartButton";
 
-type ProductCardProps = {
-  product: Product;
-  onAdd: (product: Product) => void;
-};
-
-export function ProductCard({ product, onAdd }: ProductCardProps) {
-  const outOfStock = product.stock <= 0;
-
+export function ProductCard({ product }: { product: Product }) {
   return (
     <article className="group flex flex-col">
       <div className="aspect-[3/4] overflow-hidden rounded-sm bg-neutral-100">
@@ -25,19 +18,11 @@ export function ProductCard({ product, onAdd }: ProductCardProps) {
         <p className="line-clamp-2 text-xs text-neutral-500">{product.description}</p>
         <p className="mt-1 text-sm font-bold">{formatPrice(product.price)}</p>
         <p className="text-xs text-neutral-500">
-          {outOfStock ? "Sin stock" : `${product.stock} disponibles`}
+          {product.stock <= 0 ? "Sin stock" : `${product.stock} disponibles`}
         </p>
       </div>
       <div className="mt-3">
-        <Button
-          variant="solid"
-          fullWidth
-          size="sm"
-          disabled={outOfStock}
-          onClick={() => onAdd(product)}
-        >
-          Agregar al carrito
-        </Button>
+        <AddToCartButton product={product} />
       </div>
     </article>
   );

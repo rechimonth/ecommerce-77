@@ -1,18 +1,37 @@
-import { useCallback, useMemo, useReducer, type ReactNode } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useReducer,
+  type ReactNode,
+} from "react";
+import type { CartContextValue } from "../../types/cart.types";
 import type { Product } from "../../types/product.types";
 import { CartContext } from "./CartContext";
-import { cartReducer, initialCartState } from "./cartReducer";
+import { cartReducer } from "./cartReducer";
+import { loadCartFromStorage, saveCartToStorage } from "./cartStorage";
 
 export function CartProvider({ children }: { children: ReactNode }) {
-  const [state, dispatch] = useReducer(cartReducer, initialCartState);
+  // Tercer argumento: inicialización lazy (lee localStorage una sola vez).
+  const [state, dispatch] = useReducer(
+    cartReducer,
+    undefined,
+    loadCartFromStorage,
+  );
 
-  // Funciones de alto nivel: construyen la Action y hacen dispatch.
-  const addItem = useCallback((product: Product, quantity?: number) => {
-    dispatch({ type: "ADD_ITEM", payload: { product, quantity } });
+  // Cada cambio del estado guarda una copia serializada.
+  useEffect(() => {
+    saveCartToStorage(state);
+  }, [state]);
+
+  // Se exponen funciones nombradas, no "dispatch": los componentes no
+  // necesitan conocer la forma de las acciones.
+  const addItem = useCallback((product: Product) => {
+    dispatch({ type: "ADD_ITEM", payload: product });
   }, []);
 
   const removeItem = useCallback((productId: string) => {
-    dispatch({ type: "REMOVE_ITEM", payload: { productId } });
+    dispatch({ type: "REMOVE_ITEM", payload: productId });
   }, []);
 
   const updateQuantity = useCallback((productId: string, quantity: number) => {
@@ -23,22 +42,23 @@ export function CartProvider({ children }: { children: ReactNode }) {
     dispatch({ type: "CLEAR_CART" });
   }, []);
 
-  const value = useMemo(() => {
-    const totalItems = state.items.reduce((acc, item) => acc + item.quantity, 0);
-    const totalPrice = state.items.reduce(
-      (acc, item) => acc + item.price * item.quantity,
-      0,
-    );
-    return {
+  const itemCount = useMemo(
+    () => state.items.reduce((sum, item) => sum + item.quantity, 0),
+    [state.items],
+  );
+
+  const value = useMemo<CartContextValue>(
+    () => ({
       items: state.items,
-      totalItems,
-      totalPrice,
+      total: state.total,
+      itemCount,
       addItem,
       removeItem,
       updateQuantity,
       clearCart,
-    };
-  }, [state.items, addItem, removeItem, updateQuantity, clearCart]);
+    }),
+    [state.items, state.total, itemCount, addItem, removeItem, updateQuantity, clearCart],
+  );
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
 }

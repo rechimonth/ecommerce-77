@@ -4,7 +4,6 @@ import { EmptyState } from "../../components/states/EmptyState";
 import { ErrorState } from "../../components/states/ErrorState";
 import { LoadingState } from "../../components/states/LoadingState";
 import { Button } from "../../components/ui/Button";
-import { useCart } from "../../contexts/cart";
 import { useProducts } from "../../contexts/products";
 
 // Contenedor: obtiene datos y decide qué estado mostrar.
@@ -22,7 +21,6 @@ export function ProductsPage() {
     setCategoryId,
     resetFilters,
   } = useProducts();
-  const { addItem } = useCart();
 
   const hasFilters = Boolean(searchText.trim() || categoryId);
 
@@ -57,7 +55,7 @@ export function ProductsPage() {
 
       {!isLoading && !error && products.length > 0 && (
         <>
-          <ProductGrid products={products} onAdd={addItem} />
+          <ProductGrid products={products} />
           <div className="flex justify-center">
             <Button
               variant="solid"

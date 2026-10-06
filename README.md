@@ -1,10 +1,10 @@
 # ecommerce-77
 
-E-commerce SPA construida en paralelo con las clases de **FullTime 77 - Frontend AI Driven**. El objetivo final es el proyecto integrador descrito en [`Proyecto.md`](./Proyecto.md). Por ahora el repositorio contiene solo lo visto en las clases 00 a 04: arquitectura, contextos, catálogo con Firestore, seeder y carrito.
+E-commerce SPA construida en paralelo con las clases de **FullTime 77 - Frontend AI Driven**. El objetivo final es el proyecto integrador descrito en [`Proyecto.md`](./Proyecto.md). Por ahora el repositorio contiene solo lo visto en las clases 00 a 05: arquitectura, contextos, catálogo con Firestore, seeder y carrito con `useReducer`, persistencia y tests.
 
 ## Stack
 
-React 18+ · TypeScript · Vite · Tailwind CSS 4 (`@tailwindcss/vite`) · Firebase (Firestore)
+React 18+ · TypeScript · Vite · Tailwind CSS 4 (`@tailwindcss/vite`) · React Router · Firebase (Firestore) · Vitest
 
 ## Qué incluye hasta ahora
 
@@ -15,7 +15,7 @@ React 18+ · TypeScript · Vite · Tailwind CSS 4 (`@tailwindcss/vite`) · Fireb
 | 02 Firestore | Capa de servicios (`products.service.ts`), tipos de dominio, conversión `Timestamp` → `Date` |
 | 03 Componentes | `Button` (discriminated union), `Modal` con `children`, estados reutilizables, container/presentacionales |
 | 04 Catálogo | Seeder, `ProductsProvider`, filtro por categoría, búsqueda por prefijo con debounce, paginación con cursor |
-| Carrito | `CartProvider` con `useReducer` (agregar, quitar, actualizar cantidad, vaciar) y total calculado |
+| 05 Carrito | `cartReducer` puro, `CartProvider` + `useCart`, persistencia en `localStorage` con inicialización lazy, `AddToCartButton`, `CartPage`, badge en el header y tests con Vitest |
 
 ## Estructura
 
@@ -25,18 +25,20 @@ src/
 │   ├── ui/            Button, Modal
 │   ├── states/        LoadingState, EmptyState, ErrorState
 │   ├── products/      ProductCard, ProductGrid, ProductFilters
-│   ├── cart/          CartView
+│   ├── cart/          AddToCartButton, CartItemRow, CartSummary
 │   └── layout/        Header
-├── pages/products/    ProductsPage (container)
+├── pages/
+│   ├── products/      ProductsPage (container)
+│   └── cart/          CartPage (container)
 ├── layouts/           MainLayout
 ├── contexts/
 │   ├── products/      Context, Provider, useProducts, types
-│   ├── cart/          Context, Provider, cartReducer, useCart, types
+│   ├── cart/          cartReducer, cartStorage, CartContext, CartProvider (+ tests)
 │   └── AppProviders.tsx
-├── hooks/             useDebounce
+├── hooks/             useDebounce, useCart
 ├── services/          products.service.ts (único acceso a Firestore)
 ├── config/            firebase.ts
-├── types/             product.types.ts
+├── types/             product.types.ts, cart.types.ts
 └── utils/             formatPrice, categories
 scripts/seed.ts        Seeder de 20 productos
 ```
@@ -68,8 +70,9 @@ firebase deploy --only firestore:rules,firestore:indexes
 ### Desarrollo
 
 ```bash
-npm run dev
-npm run build
+npm run dev        # servidor de desarrollo
+npm run build      # chequeo de tipos + build de producción
+npm test           # tests con Vitest
 ```
 
 ## Decisiones
@@ -79,6 +82,12 @@ npm run build
 - **Búsqueda por prefijo sobre `nameLower`** (no existe `contains` en Firestore) con debounce de 400 ms.
 - **Paginación con cursor** (`startAfter(lastDoc)`), no con offset.
 - **`useReducer` para el carrito:** varias acciones sobre el mismo estado, lógica centralizada en una función pura fácil de testear.
+- **El total se deriva, no se acumula:** `calculateTotal` lo recalcula siempre desde `items` y redondea a 2 decimales (`10.1 + 20.2` da `30.3`).
+- **Cantidad 0 o negativa quita el item:** los componentes no deciden entre actualizar y eliminar.
+- **La regla de stock vive en la UI** (`AddToCartButton`, `CartItemRow`), no en el reducer: una regla, una sola fuente de verdad.
+- **Persistencia:** `localStorage` guarda una copia serializada y se restaura al montar con `useReducer(reducer, undefined, loader)`. Se revive `addedAt` como `Date`, se descartan items inválidos y se recalcula el total.
+- **Estado global vs local:** el carrito vive en el context; el feedback "✓ Agregado" (1500 ms) es estado local del botón.
+- **Rutas:** `/products` y `/cart` bajo un `MainLayout` con `Outlet`.
 - **`ProductsProvider`:** respecto al ejemplo de la clase, se descartan las respuestas de consultas viejas (`lastRequestId`) para que un cambio rápido de filtro no pierda la consulta ni mezcle resultados.
 
 ## Commits
