@@ -17,6 +17,7 @@ export function CheckoutPage() {
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
 
+  // Crea el pedido simulado y solo vacía el carrito después de confirmar que Firestore lo guardó.
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!user || items.length === 0) return;

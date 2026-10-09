@@ -18,6 +18,7 @@ export function AuthForm({ mode }: AuthFormProps) {
   const location = useLocation();
   const destination = (location.state as { from?: { pathname?: string } } | null)?.from?.pathname ?? "/products";
 
+  // Valida los campos y llama al método correspondiente según sea registro o inicio de sesión.
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     clearAuthError();
@@ -34,6 +35,7 @@ export function AuthForm({ mode }: AuthFormProps) {
     } finally { setIsSubmitting(false); }
   }
 
+  // Delegamos el acceso con Google al proveedor; Firebase se encarga del popup y la sesión.
   async function handleGoogle() {
     setLocalError(null);
     setIsSubmitting(true);

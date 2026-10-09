@@ -8,9 +8,9 @@ type ModalProps = {
   children: ReactNode;
 };
 
-// La estructura (overlay, layout, cerrar) la decide el Modal;
-// el contenido lo decide el consumidor con children.
+// Modal controla el overlay y el cierre; quien lo llama decide el contenido mediante children.
 export function Modal({ isOpen, onClose, title, children }: ModalProps) {
+  // Escape cierra el diálogo; el listener se elimina para evitar eventos después del cierre.
   useEffect(() => {
     if (!isOpen) return;
     const onKeyDown = (event: KeyboardEvent) => {
@@ -22,24 +22,21 @@ export function Modal({ isOpen, onClose, title, children }: ModalProps) {
 
   if (!isOpen) return null;
 
-  return (
+  return <div
+    className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 sm:items-center"
+    onClick={onClose}
+  >
+    {/* Evita que un clic dentro del diálogo se propague al overlay y lo cierre accidentalmente. */}
     <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 sm:items-center"
-      onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+      aria-label={title ?? "Ventana de diálogo"}
+      className="flex max-h-[90vh] w-full flex-col gap-4 overflow-hidden rounded-t-md bg-white p-5 sm:max-w-lg sm:rounded-sm"
+      onClick={(event) => event.stopPropagation()}
     >
-      <div
-        role="dialog"
-        aria-modal="true"
-        aria-label={title}
-        className="flex max-h-[90vh] w-full flex-col gap-4 overflow-hidden rounded-t-md bg-white p-5 sm:max-w-lg sm:rounded-sm"
-        onClick={(event) => event.stopPropagation()}
-      >
-        {title && <h2 className="text-lg font-bold">{title}</h2>}
-        <div className="overflow-y-auto">{children}</div>
-        <Button variant="solid" onClick={onClose}>
-          Cerrar
-        </Button>
-      </div>
+      {title && <h2 className="text-lg font-bold">{title}</h2>}
+      <div className="overflow-y-auto">{children}</div>
+      <Button variant="solid" onClick={onClose}>Cerrar</Button>
     </div>
-  );
+  </div>;
 }

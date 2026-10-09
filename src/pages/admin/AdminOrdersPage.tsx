@@ -13,6 +13,7 @@ export function AdminOrdersPage() {
   const [savingId, setSavingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  // Actualiza el listado aplicando el filtro de estado actual.
   const loadOrders = useCallback(async () => {
     setLoading(true);
     setError(null);
@@ -23,6 +24,7 @@ export function AdminOrdersPage() {
 
   useEffect(() => { void loadOrders(); }, [loadOrders]);
 
+  // Persiste el estado elegido por el administrador y vuelve a consultar los pedidos.
   async function changeStatus(orderId: string, nextStatus: OrderStatus) {
     setSavingId(orderId);
     setError(null);

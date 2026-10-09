@@ -47,7 +47,7 @@ firestore.indexes.json
 
 ## 1. Instalación local
 
-Requisitos: Node.js 22 o superior y npm.
+Requisitos: Node.js 22.x y npm (la plataforma Vercel también debe estar configurada en Node.js 22.x).
 
 ```bash
 git clone https://github.com/rechimonth/ecommerce-77.git
@@ -230,7 +230,7 @@ npm run typecheck
 npm run build
 ```
 
-La suite cubre las acciones del reducer, tolerancia a datos corruptos en la persistencia del carrito, los hooks `useCart`/`useAuth`, y un flujo de carrito y checkout con servicio de pedidos mockeado. Los tests se ejecutan localmente y no deben necesitar una base de datos real.
+La suite cubre las acciones del reducer, tolerancia a datos corruptos en la persistencia del carrito, los hooks `useCart`/`useAuth`, y un flujo de carrito y checkout con servicio de pedidos mockeado. Ejecutá `npm test` por separado antes de integrar cambios; el build de Vercel realiza typecheck y compilación, sin ejecutar pruebas unitarias como parte del comando de build.
 
 ## Bitácora de uso de IA
 

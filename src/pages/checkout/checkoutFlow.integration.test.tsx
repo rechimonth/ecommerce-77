@@ -1,46 +1,72 @@
 import { fireEvent, screen, waitFor } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
-import { renderWithProviders } from "../../test/renderWithProviders";
-import { useCart } from "../../hooks/useCart";
-import { createOrder } from "../../services/orders.service";
+import { Route, Routes } from "react-router-dom";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { CART_STORAGE_KEY } from "../../contexts/cart/cartStorage";
 import type { Product } from "../../types/product.types";
+import { renderWithProviders } from "../../test/renderWithProviders";
+import { createOrder } from "../../services/orders.service";
+import { CheckoutPage } from "./CheckoutPage";
 
 vi.mock("../../services/orders.service", () => ({
   createOrder: vi.fn(async () => "order-test-123"),
 }));
+
 const product: Product = {
-  id: "botas-test", name: "Botas de prueba", nameLower: "botas de prueba",
-  image: "https://example.test/botas.jpg", description: "Botas para el test",
-  price: 80, stock: 3, categoryId: "shoes",
+  id: "botas-test",
+  name: "Botas de prueba",
+  nameLower: "botas de prueba",
+  image: "https://example.test/botas.jpg",
+  description: "Botas para probar el checkout",
+  price: 80,
+  stock: 3,
+  categoryId: "shoes",
 };
 
-// Componente pequeño que conecta las acciones reales del carrito con el servicio de pedidos mockeado.
-function CheckoutHarness() {
-  const cart = useCart();
-  async function confirm() {
-    await createOrder({
-      userId: "customer-test", customerName: "Cliente de prueba", email: "cliente@example.test",
-      shippingAddress: "Calle de prueba 123", items: cart.items, total: cart.total,
-    });
-    cart.clearCart();
-  }
-  return <div>
-    <button onClick={() => cart.addItem(product)}>Agregar al carrito</button>
-    <p>total: {cart.total}</p>
-    <p>artículos: {cart.itemCount}</p>
-    <button onClick={() => void confirm()}>Confirmar pedido</button>
-  </div>;
+// Carga un carrito serializado como el que produce el almacenamiento real de la aplicación.
+function seedCartForTest() {
+  window.localStorage.setItem(CART_STORAGE_KEY, JSON.stringify({
+    items: [{ product, quantity: 1, addedAt: "2026-01-01T00:00:00.000Z" }],
+    total: 999, // Se ignora deliberadamente: el provider recalcula el total desde los artículos.
+  }));
 }
 
-describe("flujo integrado de carrito y checkout", () => {
-  it("agrega una pieza, crea la orden por el servicio mockeado y vacía el carrito", async () => {
-    renderWithProviders(<CheckoutHarness />);
-    fireEvent.click(screen.getByRole("button", { name: "Agregar al carrito" }));
-    expect(screen.getByText("total: 80")).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "Confirmar pedido" }));
-    await waitFor(() => expect(createOrder).toHaveBeenCalledWith(expect.objectContaining({
-      userId: "customer-test", total: 80,
-    })));
-    await waitFor(() => expect(screen.getByText("artículos: 0")).toBeInTheDocument());
+describe("integración real de checkout", () => {
+  beforeEach(() => {
+    seedCartForTest();
+  });
+
+  it("confirma el pedido, usa el servicio mockeado, navega al detalle y vacía el carrito", async () => {
+    renderWithProviders(
+      <Routes>
+        <Route path="/checkout" element={<CheckoutPage />} />
+        <Route path="/orders/:orderId" element={<p>Pedido creado correctamente</p>} />
+      </Routes>,
+      { route: "/checkout" },
+    );
+
+    fireEvent.change(screen.getByLabelText("Nombre completo"), {
+      target: { value: "Cliente de prueba" },
+    });
+    fireEvent.change(screen.getByLabelText("Dirección de entrega"), {
+      target: { value: "Av. Ejemplo 123, Buenos Aires" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /Confirmar pedido/ }));
+
+    await waitFor(() => {
+      expect(createOrder).toHaveBeenCalledWith(expect.objectContaining({
+        userId: "customer-test",
+        customerName: "Cliente de prueba",
+        shippingAddress: "Av. Ejemplo 123, Buenos Aires",
+        total: 80,
+        items: [expect.objectContaining({
+          product: expect.objectContaining({ id: "botas-test" }),
+          quantity: 1,
+        })],
+      }));
+    });
+    expect(await screen.findByText("Pedido creado correctamente")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(JSON.parse(window.localStorage.getItem(CART_STORAGE_KEY) ?? "{}").items).toEqual([]);
+    });
   });
 });

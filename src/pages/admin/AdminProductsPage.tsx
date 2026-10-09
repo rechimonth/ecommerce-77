@@ -31,9 +31,11 @@ export function AdminProductsPage() {
   }, []);
   useEffect(() => { void refresh(); }, [refresh]);
 
+  // Prepara un formulario vacío para crear un producto nuevo.
   function startNew() {
     setEditing(null); setForm(emptyForm); setFile(null); setNotice(null); setError(null);
   }
+  // Copia los valores de un producto al formulario sin modificar el documento original.
   function startEdit(product: Product) {
     setEditing(product);
     setForm({ name: product.name, description: product.description, categoryId: product.categoryId,
@@ -41,6 +43,7 @@ export function AdminProductsPage() {
     setFile(null); setNotice(null); setError(null);
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
+  // Valida el formulario, opcionalmente sube la imagen y persiste el producto en Firestore.
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!user) { setError("Tu sesión expiró. Volvé a ingresar."); return; }
@@ -65,6 +68,7 @@ export function AdminProductsPage() {
       setError(cause instanceof Error ? cause.message : "No se pudo guardar el producto.");
     } finally { setSaving(false); }
   }
+  // Solicita confirmación antes de eliminar un producto y actualiza la lista al terminar.
   async function handleDelete(product: Product) {
     if (!window.confirm("¿Querés eliminar “" + product.name + "”? Esta acción no se puede deshacer.")) return;
     setError(null);

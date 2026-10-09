@@ -1,25 +1,24 @@
-// Presentacional: no conoce productos, ni servicios, ni Firestore.
+// Presentacional: no conoce productos, servicios ni Firestore; solo informa que una operación sigue en curso.
 type LoadingStateProps = {
   message?: string;
   skeletons?: number;
 };
 
+// Skeleton reutilizable con cantidad configurable para mantener una señal visual durante la carga.
 export function LoadingState({
   message = "Cargando…",
   skeletons = 8,
 }: LoadingStateProps) {
-  return (
-    <div role="status" aria-live="polite">
-      <p className="mb-4 text-sm text-neutral-500">{message}</p>
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        {Array.from({ length: skeletons }, (_, index) => (
-          <div key={index} className="animate-pulse">
-            <div className="aspect-[3/4] rounded-sm bg-neutral-200" />
-            <div className="mt-3 h-3 w-2/3 rounded-sm bg-neutral-200" />
-            <div className="mt-2 h-3 w-1/3 rounded-sm bg-neutral-200" />
-          </div>
-        ))}
-      </div>
+  return <div role="status" aria-live="polite">
+    <p className="mb-4 text-sm text-neutral-500">{message}</p>
+    <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+      {Array.from({ length: skeletons }, (_, index) => (
+        <div key={index} className="animate-pulse">
+          <div className="aspect-[3/4] rounded-sm bg-neutral-200" />
+          <div className="mt-3 h-3 w-2/3 rounded-sm bg-neutral-200" />
+          <div className="mt-2 h-3 w-1/3 rounded-sm bg-neutral-200" />
+        </div>
+      ))}
     </div>
-  );
+  </div>;
 }

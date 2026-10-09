@@ -34,6 +34,7 @@ export function AddToCartButton({ product }: { product: Product }) {
   else if (reachedLimit) state = "maxReached";
   else if (quantityInCart > 0) state = "addAnother";
 
+  // Agrega una unidad al Context y muestra una confirmación breve accesible por su etiqueta.
   const handleClick = () => {
     addItem(product);
     setJustAdded(true);

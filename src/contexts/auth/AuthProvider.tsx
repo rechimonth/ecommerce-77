@@ -13,6 +13,7 @@ import type { AuthContextValue, UserProfile, UserRole } from "../../types/user.t
 import { AuthContext } from "./AuthContext";
 
 // Traduce algunos errores habituales de Firebase a mensajes que una persona pueda resolver.
+// Convierte códigos de Firebase en texto accionable y evita exponer errores internos crudos.
 function authErrorMessage(error: unknown): string {
   const code = typeof error === "object" && error !== null && "code" in error
     ? String((error as { code: unknown }).code)
@@ -32,6 +33,7 @@ function authErrorMessage(error: unknown): string {
 }
 
 // Crea un perfil de cliente solo si todavía no existe; nunca degrada a un administrador.
+// Lee el perfil de Firestore; si falta, crea un perfil customer sin asignar privilegios administrativos.
 async function ensureProfile(firebaseUser: import("firebase/auth").User): Promise<UserProfile> {
   const userRef = doc(db, "users", firebaseUser.uid);
   const snapshot = await getDoc(userRef);
@@ -98,6 +100,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
+  // Inicia sesión con credenciales y publica un error legible si Firebase rechaza el intento.
   const signInWithEmail = useCallback(async (email: string, password: string) => {
     setError(null);
     try {
@@ -109,6 +112,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  // Registra solo clientes; el rol admin se concede manualmente desde un entorno confiable.
   const registerWithEmail = useCallback(async (name: string, email: string, password: string) => {
     setError(null);
     try {
@@ -132,6 +136,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  // Abre el flujo oficial de Firebase/Google y deja que onAuthStateChanged sincronice el perfil.
   const signInWithGoogle = useCallback(async () => {
     setError(null);
     try {
@@ -143,6 +148,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  // Cierra la sesión Firebase; el listener limpia el usuario y el perfil del Context.
   const signOut = useCallback(async () => {
     setError(null);
     try {
