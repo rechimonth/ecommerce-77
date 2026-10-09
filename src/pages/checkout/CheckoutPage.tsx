@@ -10,7 +10,7 @@ import { formatPrice } from "../../utils/formatPrice";
 // Checkout de demostración: no cobra dinero, crea una orden pendiente en Firestore.
 export function CheckoutPage() {
   const { user, profile } = useAuth();
-  const { items, total, clearCart, updateQuantity, removeItem } = useCart();
+  const { items, total, clearCart, updateQuantity, removeItem, syncError } = useCart();
   const [address, setAddress] = useState("");
   const [name, setName] = useState(profile?.displayName ?? "");
   const [submitting, setSubmitting] = useState(false);
@@ -55,6 +55,7 @@ export function CheckoutPage() {
             <textarea required minLength={8} autoComplete="street-address" value={address} onChange={(event) => setAddress(event.target.value)} rows={3} className="rounded border border-neutral-300 px-3 py-3 font-normal focus:border-black focus:outline-none" />
           </label>
           <div className="rounded border border-amber-200 bg-amber-50 p-3 text-sm text-amber-950">Pago simulado para el proyecto académico; no ingreses datos bancarios.</div>
+          {syncError && <p role="alert" className="rounded border border-amber-300 bg-amber-50 p-3 text-sm text-amber-950">{syncError}</p>}
           {error && <p role="alert" className="rounded bg-red-50 p-3 text-sm text-red-800">{error}</p>}
           <Button variant="solid" type="submit" fullWidth loading={submitting}>Confirmar pedido · {formatPrice(total)}</Button>
         </form>

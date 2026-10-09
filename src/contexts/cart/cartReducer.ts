@@ -34,6 +34,8 @@ export function cartReducer(state: CartState, action: CartAction): CartState {
         item.product.id === productId ? { ...item, quantity } : item,
       ));
     }
+    case "HYDRATE_CART":
+      return withTotal(action.payload);
     case "CLEAR_CART":
       return initialCartState;
     default:

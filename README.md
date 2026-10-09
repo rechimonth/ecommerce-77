@@ -13,7 +13,7 @@ Tienda SPA de moda de inspiración rural y ecuestre, construida como proyecto in
 - **Autenticación:** registro/login por correo y contraseña, login con Google y persistencia de sesión con Firebase Auth.
 - **Roles:** `customer` y `admin`. Los nuevos perfiles nacen como customer; la elevación a admin se realiza por un procedimiento manual confiable.
 - **Catálogo:** Firestore, búsqueda por prefijo con debounce, categorías, paginación con cursor y detalle por producto.
-- **Carrito:** Context API + `useReducer`, cantidad, eliminación, total derivado y persistencia local.
+- **Carrito:** Context API + `useReducer`, total derivado y persistencia en Firestore por UID. Los invitados conservan el carrito en localStorage y se combina al iniciar sesión.
 - **Compra:** checkout de simulación, creación de orden `pending`, historial propio y detalle del pedido.
 - **Administración:** CRUD de productos, carga de imágenes en S3 mediante URL prefirmada, listado/filtro de pedidos y actualización del estado.
 - **Seguridad:** reglas de Firestore por usuario/rol y endpoint serverless que comprueba el token Firebase antes de autorizar una subida a S3.
@@ -98,7 +98,7 @@ VITE_FIREBASE_APP_ID=
 
 Estos valores corresponden al **SDK web**. Los valores `VITE_*` pueden estar incluidos en el bundle del navegador: no pongas una clave privada, secreto de AWS ni service account bajo ese prefijo. La seguridad depende de reglas y configuración de la plataforma, no de ocultar la API key web.
 
-**Importante:** antes de probar el registro de usuario, desplegá las reglas e índices de la sección 6. Las reglas antiguas del repositorio permiten leer el catálogo pero bloquean crear perfiles `users/{uid}`, por lo que el registro no completará su perfil hasta que estén actualizadas.
+**Importante:** antes de probar el registro de usuario, desplegá las reglas e índices de la sección 6. Desplegá estas reglas para crear perfiles `users/{uid}` y guardar el carrito privado `carts/{uid}`. Sin las reglas actualizadas, el registro y la sincronización del carrito no completarán su flujo.
 
 ### Crear las credenciales de servidor para Firebase Admin
 
@@ -133,7 +133,7 @@ En S3 → bucket → **Permissions**:
 
 ### Configurar CORS
 
-En S3 → bucket → **Permissions → Cross-origin resource sharing (CORS)**, guardá esta configuración JSON. Reemplazá `https://TU-DOMINIO-VERCEL` por el dominio de producción exacto, sin barra al final.
+En S3 → bucket → **Permissions → Cross-origin resource sharing (CORS)**, guardá esta configuración JSON. El CORS se verificó y actualmente permite `https://ecommerce-77.vercel.app` y `http://localhost:5173`. Si Vercel muestra otro dominio en Settings → Domains, agregalo explícitamente sin barra al final.
 
 ```json
 [
@@ -142,7 +142,7 @@ En S3 → bucket → **Permissions → Cross-origin resource sharing (CORS)**, g
     "AllowedMethods": ["PUT", "GET", "HEAD"],
     "AllowedOrigins": [
       "http://localhost:5173",
-      "https://TU-DOMINIO-VERCEL"
+      "https://ecommerce-77.vercel.app"
     ],
     "ExposeHeaders": ["ETag"],
     "MaxAgeSeconds": 3000
@@ -209,7 +209,7 @@ firebase login
 firebase deploy --project ecommerce--77 --only firestore:rules,firestore:indexes
 ```
 
-**Antes de desplegar**, verificá que el proyecto activo sea `ecommerce--77` y que tus cuentas de cliente no tengan rol admin. Las reglas bloquean por defecto las colecciones no declaradas; permiten leer el catálogo, escribir productos solo a admin, crear pedidos propios como `pending`, y que cada cliente lea solo sus pedidos. Admin puede gestionar todos los pedidos.
+**Antes de desplegar**, verificá que el proyecto activo sea `ecommerce--77` y que tus cuentas de cliente no tengan rol admin. Las reglas bloquean por defecto las colecciones no declaradas; permiten leer el catálogo, guardar carritos únicamente bajo el UID autenticado, escribir productos solo a admin, crear pedidos propios como `pending`, y que cada cliente lea solo sus pedidos. Admin puede gestionar todos los pedidos.
 
 ## 7. Flujo seguro de imagen (presigned URL)
 

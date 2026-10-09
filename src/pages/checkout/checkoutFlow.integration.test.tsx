@@ -10,6 +10,10 @@ import { CheckoutPage } from "./CheckoutPage";
 vi.mock("../../services/orders.service", () => ({
   createOrder: vi.fn(async () => "order-test-123"),
 }));
+vi.mock("../../services/cart.service", () => ({
+  getUserCart: vi.fn(async () => null),
+  saveUserCart: vi.fn(async () => undefined),
+}));
 
 const product: Product = {
   id: "botas-test",
@@ -22,16 +26,17 @@ const product: Product = {
   categoryId: "shoes",
 };
 
-// Carga un carrito serializado como el que produce el almacenamiento real de la aplicación.
+// Simula la estructura que produce el almacenamiento real del carrito.
 function seedCartForTest() {
   window.localStorage.setItem(CART_STORAGE_KEY, JSON.stringify({
     items: [{ product, quantity: 1, addedAt: "2026-01-01T00:00:00.000Z" }],
-    total: 999, // Se ignora deliberadamente: el provider recalcula el total desde los artículos.
+    total: 999, // Se ignora: el provider recalcula el importe desde los artículos.
   }));
 }
 
 describe("integración real de checkout", () => {
   beforeEach(() => {
+    vi.clearAllMocks();
     seedCartForTest();
   });
 

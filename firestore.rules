@@ -43,6 +43,17 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
+    // Carrito privado por usuario: el ID del documento siempre coincide con el UID autenticado.
+    match /carts/{userId} {
+      allow read: if signedIn() && request.auth.uid == userId;
+      allow create, update: if signedIn()
+        && request.auth.uid == userId
+        && request.resource.data.keys().hasOnly(['items', 'updatedAt'])
+        && request.resource.data.items is list
+        && request.resource.data.items.size() <= 50;
+      allow delete: if signedIn() && request.auth.uid == userId;
+    }
+
     // Catálogo público de lectura. Todas las escrituras requieren rol verificado en Firestore.
     match /products/{productId} {
       allow read: if true;

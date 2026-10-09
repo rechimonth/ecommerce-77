@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useState } from "react";
-import { ErrorState } from "../../components/states/ErrorState";
 import { LoadingState } from "../../components/states/LoadingState";
 import { listAdminOrders, updateOrderStatus } from "../../services/orders.service";
 import { ORDER_STATUSES, ORDER_STATUS_LABELS, type CustomerOrder, type OrderStatus } from "../../types/order.types";
