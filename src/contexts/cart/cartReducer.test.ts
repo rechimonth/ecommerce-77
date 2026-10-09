@@ -18,7 +18,7 @@ const emptyState: CartState = { items: [], total: 0 };
 
 describe("cartReducer", () => {
   it("ADD_ITEM agrega un producto nuevo con cantidad 1", () => {
-    const next = cartReducer(emptyState, { type: "ADD_ITEM", payload: mockProduct });
+    const next = cartReducer(emptyState, { type: "ADD_ITEM", payload: { product: mockProduct, addedAt: new Date("2026-01-01T00:00:00Z") } });
 
     expect(next.items).toHaveLength(1);
     expect(next.items[0].quantity).toBe(1);
@@ -26,8 +26,8 @@ describe("cartReducer", () => {
   });
 
   it("ADD_ITEM incrementa la cantidad si el producto ya existe", () => {
-    const withItem = cartReducer(emptyState, { type: "ADD_ITEM", payload: mockProduct });
-    const next = cartReducer(withItem, { type: "ADD_ITEM", payload: mockProduct });
+    const withItem = cartReducer(emptyState, { type: "ADD_ITEM", payload: { product: mockProduct, addedAt: new Date("2026-01-01T00:00:00Z") } });
+    const next = cartReducer(withItem, { type: "ADD_ITEM", payload: { product: mockProduct, addedAt: new Date("2026-01-01T00:00:00Z") } });
 
     expect(next.items).toHaveLength(1); // sigue siendo 1 fila, no 2
     expect(next.items[0].quantity).toBe(2);
@@ -35,7 +35,7 @@ describe("cartReducer", () => {
   });
 
   it("REMOVE_ITEM elimina el producto del carrito", () => {
-    const withItem = cartReducer(emptyState, { type: "ADD_ITEM", payload: mockProduct });
+    const withItem = cartReducer(emptyState, { type: "ADD_ITEM", payload: { product: mockProduct, addedAt: new Date("2026-01-01T00:00:00Z") } });
     const next = cartReducer(withItem, { type: "REMOVE_ITEM", payload: "p1" });
 
     expect(next.items).toHaveLength(0);
@@ -43,7 +43,7 @@ describe("cartReducer", () => {
   });
 
   it("UPDATE_QUANTITY actualiza la cantidad y el total", () => {
-    const withItem = cartReducer(emptyState, { type: "ADD_ITEM", payload: mockProduct });
+    const withItem = cartReducer(emptyState, { type: "ADD_ITEM", payload: { product: mockProduct, addedAt: new Date("2026-01-01T00:00:00Z") } });
     const next = cartReducer(withItem, {
       type: "UPDATE_QUANTITY",
       payload: { productId: "p1", quantity: 3 },
@@ -54,7 +54,7 @@ describe("cartReducer", () => {
   });
 
   it("UPDATE_QUANTITY con cantidad 0 elimina el item", () => {
-    const withItem = cartReducer(emptyState, { type: "ADD_ITEM", payload: mockProduct });
+    const withItem = cartReducer(emptyState, { type: "ADD_ITEM", payload: { product: mockProduct, addedAt: new Date("2026-01-01T00:00:00Z") } });
     const next = cartReducer(withItem, {
       type: "UPDATE_QUANTITY",
       payload: { productId: "p1", quantity: 0 },
@@ -65,7 +65,7 @@ describe("cartReducer", () => {
   });
 
   it("CLEAR_CART vacía el carrito", () => {
-    const withItem = cartReducer(emptyState, { type: "ADD_ITEM", payload: mockProduct });
+    const withItem = cartReducer(emptyState, { type: "ADD_ITEM", payload: { product: mockProduct, addedAt: new Date("2026-01-01T00:00:00Z") } });
     const next = cartReducer(withItem, { type: "CLEAR_CART" });
 
     expect(next.items).toHaveLength(0);
@@ -75,9 +75,9 @@ describe("cartReducer", () => {
   it("calcula correctamente el total con múltiples productos", () => {
     const product2 = { ...mockProduct, id: "p2", price: 50 };
 
-    let state = cartReducer(emptyState, { type: "ADD_ITEM", payload: mockProduct });
-    state = cartReducer(state, { type: "ADD_ITEM", payload: product2 });
-    state = cartReducer(state, { type: "ADD_ITEM", payload: product2 });
+    let state = cartReducer(emptyState, { type: "ADD_ITEM", payload: { product: mockProduct, addedAt: new Date("2026-01-01T00:00:00Z") } });
+    state = cartReducer(state, { type: "ADD_ITEM", payload: { product: product2, addedAt: new Date("2026-01-01T00:00:00Z") } });
+    state = cartReducer(state, { type: "ADD_ITEM", payload: { product: product2, addedAt: new Date("2026-01-01T00:00:00Z") } });
 
     expect(state.total).toBe(200); // 100*1 + 50*2
   });
@@ -89,7 +89,7 @@ describe("cartReducer", () => {
     };
     const originalItems = state.items;
 
-    const next = cartReducer(state, { type: "ADD_ITEM", payload: mockProduct });
+    const next = cartReducer(state, { type: "ADD_ITEM", payload: { product: mockProduct, addedAt: new Date("2026-01-01T00:00:00Z") } });
 
     expect(next).not.toBe(state); // objeto distinto en memoria
     expect(next.items).not.toBe(originalItems); // array distinto en memoria
@@ -100,7 +100,7 @@ describe("cartReducer", () => {
   // ---- Casos edge (paso 3 de la clase) ----
 
   it("REMOVE_ITEM con un id inexistente deja el carrito igual (doble click en eliminar)", () => {
-    const withItem = cartReducer(emptyState, { type: "ADD_ITEM", payload: mockProduct });
+    const withItem = cartReducer(emptyState, { type: "ADD_ITEM", payload: { product: mockProduct, addedAt: new Date("2026-01-01T00:00:00Z") } });
     const next = cartReducer(withItem, { type: "REMOVE_ITEM", payload: "no-existe" });
 
     expect(next.items).toHaveLength(1);
@@ -108,7 +108,7 @@ describe("cartReducer", () => {
   });
 
   it("UPDATE_QUANTITY con productId inexistente no altera items ni total", () => {
-    const withItem = cartReducer(emptyState, { type: "ADD_ITEM", payload: mockProduct });
+    const withItem = cartReducer(emptyState, { type: "ADD_ITEM", payload: { product: mockProduct, addedAt: new Date("2026-01-01T00:00:00Z") } });
     const next = cartReducer(withItem, {
       type: "UPDATE_QUANTITY",
       payload: { productId: "no-existe", quantity: 5 },
@@ -120,7 +120,7 @@ describe("cartReducer", () => {
   });
 
   it("UPDATE_QUANTITY con cantidad negativa se trata igual que 0", () => {
-    const withItem = cartReducer(emptyState, { type: "ADD_ITEM", payload: mockProduct });
+    const withItem = cartReducer(emptyState, { type: "ADD_ITEM", payload: { product: mockProduct, addedAt: new Date("2026-01-01T00:00:00Z") } });
     const next = cartReducer(withItem, {
       type: "UPDATE_QUANTITY",
       payload: { productId: "p1", quantity: -2 },
@@ -132,7 +132,7 @@ describe("cartReducer", () => {
 
   it("un producto con price 0 suma 0 al total", () => {
     const free = { ...mockProduct, id: "free", price: 0 };
-    const next = cartReducer(emptyState, { type: "ADD_ITEM", payload: free });
+    const next = cartReducer(emptyState, { type: "ADD_ITEM", payload: { product: free, addedAt: new Date("2026-01-01T00:00:00Z") } });
 
     expect(next.items).toHaveLength(1);
     expect(next.total).toBe(0);
@@ -142,8 +142,8 @@ describe("cartReducer", () => {
     const a = { ...mockProduct, id: "a", price: 10.1 };
     const b = { ...mockProduct, id: "b", price: 20.2 };
 
-    let state = cartReducer(emptyState, { type: "ADD_ITEM", payload: a });
-    state = cartReducer(state, { type: "ADD_ITEM", payload: b });
+    let state = cartReducer(emptyState, { type: "ADD_ITEM", payload: { product: a, addedAt: new Date("2026-01-01T00:00:00Z") } });
+    state = cartReducer(state, { type: "ADD_ITEM", payload: { product: b, addedAt: new Date("2026-01-01T00:00:00Z") } });
 
     expect(state.total).toBe(30.3);
   });

@@ -1,17 +1,11 @@
-const whole = new Intl.NumberFormat("es-ES", {
-  style: "currency",
-  currency: "EUR",
-  maximumFractionDigits: 0,
+const usdWhole = new Intl.NumberFormat("en-US", {
+  style: "currency", currency: "USD", maximumFractionDigits: 0,
+});
+const usdWithCents = new Intl.NumberFormat("en-US", {
+  style: "currency", currency: "USD", minimumFractionDigits: 2, maximumFractionDigits: 2,
 });
 
-const withCents = new Intl.NumberFormat("es-ES", {
-  style: "currency",
-  currency: "EUR",
-  minimumFractionDigits: 2,
-  maximumFractionDigits: 2,
-});
-
-// Sin decimales si el precio es entero (489 €), con 2 si no (30,30 €).
+// Los precios se expresan siempre en dólares estadounidenses, sin conversión implícita.
 export function formatPrice(value: number): string {
-  return Number.isInteger(value) ? whole.format(value) : withCents.format(value);
+  return Number.isInteger(value) ? usdWhole.format(value) : usdWithCents.format(value);
 }

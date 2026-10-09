@@ -1,19 +1,11 @@
 import type { Product } from "./product.types";
 
-export type CartItem = {
-  product: Product;
-  quantity: number;
-  addedAt: Date;
-};
+export type CartItem = { product: Product; quantity: number; addedAt: Date };
+export type CartState = { items: CartItem[]; total: number };
 
-export type CartState = {
-  items: CartItem[];
-  total: number;
-};
-
-// Discriminated union: "type" permite a TypeScript inferir el tipo de "payload".
+// El timestamp forma parte de la acción para que el reducer no consulte el reloj.
 export type CartAction =
-  | { type: "ADD_ITEM"; payload: Product }
+  | { type: "ADD_ITEM"; payload: { product: Product; addedAt: Date } }
   | { type: "REMOVE_ITEM"; payload: string }
   | { type: "UPDATE_QUANTITY"; payload: { productId: string; quantity: number } }
   | { type: "CLEAR_CART" };

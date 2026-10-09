@@ -1,7 +1,11 @@
-node_modules
-dist
+node_modules/
+dist/
 .env
-.env.local
-.firebase
+.env.*
+!.env.example
+.firebase/
 firebase-debug.log
 *.log
+.vercel/
+coverage/
+*.tsbuildinfo

@@ -1,6 +1,6 @@
 import "dotenv/config";
-import { initializeApp } from "firebase/app";
-import { doc, getFirestore, serverTimestamp, setDoc } from "firebase/firestore";
+import { cert, getApps, initializeApp } from "firebase-admin/app";
+import { FieldValue, getFirestore } from "firebase-admin/firestore";
 
 // Lo ideal sería tener una Colección de Categorías en Firestore:
 type CategoryId = "accessories" | "clothing" | "shoes";
@@ -13,17 +13,18 @@ type SeedProduct = {
   description: string;
 };
 
-// Este script se ejecuta en NodeJS, por eso definimos nuevamente las credenciales.
-const firebaseConfig = {
-  apiKey: process.env.VITE_FIREBASE_API_KEY,
-  authDomain: process.env.VITE_FIREBASE_AUTH_DOMAIN,
-  projectId: process.env.VITE_FIREBASE_PROJECT_ID,
-  storageBucket: process.env.VITE_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: process.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
-  appId: process.env.VITE_FIREBASE_APP_ID,
-};
-
-const app = initializeApp(firebaseConfig);
+// El seeder usa el SDK Admin fuera del navegador; nunca habilites escrituras públicas
+// en Firestore solo para poder cargar el catálogo.
+const projectId = process.env.FIREBASE_PROJECT_ID;
+const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
+const privateKey = process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, "\n");
+if (!projectId || !clientEmail || !privateKey) {
+  throw new Error("Faltan FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL o FIREBASE_PRIVATE_KEY en .env");
+}
+const app = getApps().length ? getApps()[0]! : initializeApp({
+  credential: cert({ projectId, clientEmail, privateKey }),
+  projectId,
+});
 const db = getFirestore(app);
 
 // Colección de moda de campo / alta costura rural (20 productos).
@@ -209,13 +210,13 @@ async function seed() {
   for (const item of CATALOG) {
     const id = slugify(item.name);
     // ID determinístico: volver a ejecutar el seed actualiza, no duplica.
-    await setDoc(doc(db, "products", id), {
+    await db.collection("products").doc(id).set({
       ...item,
       nameLower: item.name.toLowerCase(),
       image: `https://picsum.photos/seed/${id}/600/800`,
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp(),
-    });
+      createdAt: FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp(),
+    }, { merge: true });
     console.log(`✔ ${item.name}`);
   }
 
