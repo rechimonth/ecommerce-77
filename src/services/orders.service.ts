@@ -1,8 +1,8 @@
 import {
-  addDoc, collection, doc, getDoc, getDocs, orderBy, query, serverTimestamp,
+  collection, doc, getDoc, getDocs, orderBy, query, serverTimestamp,
   Timestamp, updateDoc, where,
 } from "firebase/firestore";
-import { db } from "../config/firebase";
+import { auth, db } from "../config/firebase";
 import type { CartItem } from "../types/cart.types";
 import type { CustomerOrder, OrderItemSnapshot, OrderStatus } from "../types/order.types";
 
@@ -17,22 +17,40 @@ function toOrder(id: string, data: Record<string, unknown>): CustomerOrder {
   };
 }
 
-// El checkout guarda una fotografía de los precios/nombres que tenía el carrito.
+// Crea la orden por la función serverless, que verifica el token y calcula el total
+// usando los precios del catálogo de Firestore, nunca los importes del navegador.
 export async function createOrder(input: {
-  userId: string; customerName: string; email: string; shippingAddress: string;
-  items: CartItem[]; total: number;
+  customerName: string;
+  shippingAddress: string;
+  items: CartItem[];
 }): Promise<string> {
-  const { userId, customerName, email, shippingAddress, items, total } = input;
-  const orderItems: OrderItemSnapshot[] = items.map(({ product, quantity }) => ({
-    productId: product.id, name: product.name, image: product.image,
-    unitPrice: product.price, quantity, lineTotal: Math.round(product.price * quantity * 100) / 100,
-  }));
-  const reference = await addDoc(collection(db, "orders"), {
-    userId, customerName: customerName.trim(), email: email.trim(),
-    shippingAddress: shippingAddress.trim(), items: orderItems, total,
-    status: "pending", createdAt: serverTimestamp(), updatedAt: serverTimestamp(),
+  const currentUser = auth.currentUser;
+  if (!currentUser) throw new Error("Iniciá sesión para confirmar el pedido.");
+
+  const idToken = await currentUser.getIdToken();
+  const response = await fetch("/api/orders", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${idToken}`,
+    },
+    body: JSON.stringify({
+      customerName: input.customerName,
+      shippingAddress: input.shippingAddress,
+      items: input.items.map(({ product, quantity }) => ({
+        productId: product.id,
+        quantity,
+      })),
+    }),
   });
-  return reference.id;
+  const payload = await response.json().catch(() => ({})) as {
+    orderId?: string;
+    error?: string;
+  };
+  if (!response.ok || typeof payload.orderId !== "string" || !payload.orderId) {
+    throw new Error(payload.error ?? "No pudimos crear el pedido.");
+  }
+  return payload.orderId;
 }
 
 // Un cliente consulta únicamente sus pedidos; Firestore rules vuelve a validarlo.

@@ -25,8 +25,9 @@ export function CheckoutPage() {
     setError(null);
     try {
       const orderId = await createOrder({
-        userId: user.uid, customerName: name, email: user.email ?? "",
-        shippingAddress: address, items, total,
+        customerName: name,
+        shippingAddress: address,
+        items,
       });
       clearCart();
       navigate(`/orders/${orderId}`, { replace: true });

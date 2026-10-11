@@ -64,16 +64,9 @@ service cloud.firestore {
     // Cada cliente ve solo sus órdenes; solo administración modifica estados.
     match /orders/{orderId} {
       allow read: if signedIn() && (resource.data.userId == request.auth.uid || isAdmin());
-      allow create: if signedIn()
-        && request.resource.data.userId == request.auth.uid
-        && request.resource.data.status == 'pending'
-        && request.resource.data.customerName is string
-        && request.resource.data.email is string
-        && request.resource.data.shippingAddress is string
-        && request.resource.data.items is list
-        && request.resource.data.items.size() > 0
-        && request.resource.data.total is number
-        && request.resource.data.total >= 0;
+      // Las órdenes solo se crean desde /api/orders, que valida identidad, catálogo y precios.
+      // Firebase Admin usa un entorno confiable y omite estas reglas; el navegador no puede escribir.
+      allow create: if false;
       allow update: if isAdmin()
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'updatedAt'])
         && validOrderStatus(request.resource.data.status);

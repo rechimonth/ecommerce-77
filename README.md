@@ -14,9 +14,9 @@ Tienda SPA de moda de inspiración rural y ecuestre, construida como proyecto in
 - **Roles:** `customer` y `admin`. Los nuevos perfiles nacen como customer; la elevación a admin se realiza por un procedimiento manual confiable.
 - **Catálogo:** Firestore, búsqueda por prefijo con debounce, categorías, paginación con cursor y detalle por producto.
 - **Carrito:** Context API + `useReducer`, total derivado y persistencia en Firestore por UID. Los invitados conservan el carrito en localStorage y se combina al iniciar sesión.
-- **Compra:** checkout de simulación, creación de orden `pending`, historial propio y detalle del pedido.
+- **Compra:** checkout de simulación, creación de orden `pending`, historial propio y detalle del pedido. La orden se crea a través de `POST /api/orders`, que verifica la sesión, vuelve a leer los productos en Firestore y calcula precios y total en el servidor.
 - **Administración:** CRUD de productos, carga de imágenes en S3 mediante URL prefirmada, listado/filtro de pedidos y actualización del estado.
-- **Seguridad:** reglas de Firestore por usuario/rol y endpoint serverless que comprueba el token Firebase antes de autorizar una subida a S3.
+- **Seguridad:** reglas de Firestore por usuario/rol; las órdenes no se pueden crear directamente desde el navegador; los endpoints serverless validan el token Firebase antes de operar.
 - **Testing:** Vitest, React Testing Library, wrapper de providers, pruebas del reducer, hooks y un flujo de carrito/checkout.
 - **Deploy:** Vite SPA en Vercel y función backend en `api/s3/presign.ts`.
 
@@ -38,6 +38,7 @@ src/
 ├── config/          # Configuración pública del SDK web de Firebase
 └── test/            # Setup y wrapper para pruebas
 api/s3/presign.ts    # Función serverless: autoriza subidas y firma URLs para objetos privados
+api/orders.ts        # Función serverless: valida sesión, catálogo, stock y totales de las órdenes
 scripts/seed.ts      # Seeder ejecutado con Firebase Admin SDK
 firestore.rules      # Reglas de autorización de datos
 firestore.indexes.json
@@ -209,7 +210,7 @@ firebase login
 firebase deploy --project ecommerce--77 --only firestore:rules,firestore:indexes
 ```
 
-**Antes de desplegar**, verificá que el proyecto activo sea `ecommerce--77` y que tus cuentas de cliente no tengan rol admin. Las reglas bloquean por defecto las colecciones no declaradas; permiten leer el catálogo, guardar carritos únicamente bajo el UID autenticado, escribir productos solo a admin, crear pedidos propios como `pending`, y que cada cliente lea solo sus pedidos. Admin puede gestionar todos los pedidos.
+**Antes de desplegar**, verificá que el proyecto activo sea `ecommerce--77` y que tus cuentas de cliente no tengan rol admin. Las reglas bloquean por defecto las colecciones no declaradas; permiten leer el catálogo, guardar carritos únicamente bajo el UID autenticado, escribir productos solo a admin y que cada cliente lea solo sus pedidos. La creación de órdenes desde el SDK web está denegada: el checkout usa `POST /api/orders`, que valida el token Firebase, comprueba el perfil, vuelve a leer los productos y calcula el total confiable en el servidor. Admin puede gestionar todos los pedidos.
 
 ## 7. Flujo seguro de imagen (presigned URL)
 
@@ -222,17 +223,24 @@ firebase deploy --project ecommerce--77 --only firestore:rules,firestore:indexes
 
 Las credenciales de AWS existen solo en el servidor. Si la subida falla por CORS, revisá que el origen coincide exactamente con el dominio usado (incluido `https`) y que `Content-Type` coincida con el enviado a S3.
 
-## 8. Testing
+## 8. Creación segura de órdenes
+
+El frontend envía a `POST /api/orders` únicamente el nombre de entrega, la dirección y pares `productId/quantity`. El endpoint exige un Firebase ID token, deriva el UID y el email de la identidad verificada, comprueba que exista un perfil permitido, lee cada producto directamente de Firestore y construye la fotografía de la orden con nombres, imágenes y precios canónicos. El total se calcula en centavos enteros, se rechazan productos inexistentes y cantidades fuera de stock, y finalmente se guarda el pedido como `pending`.
+
+La regla `allow create: if false` en `firestore.rules` evita que un cliente eluda el endpoint e invente precios o un total. La función necesita `FIREBASE_PROJECT_ID`, `FIREBASE_CLIENT_EMAIL` y `FIREBASE_PRIVATE_KEY` en el entorno de Vercel. Al cambiar las reglas, desplegalas con el comando de la sección 6 antes de probar checkout; hasta entonces el nuevo endpoint puede crear órdenes, pero las reglas deben reflejar el modelo de seguridad actualizado.
+
+## 9. Testing
 
 ```bash
-npm test
+npm ci
 npm run typecheck
+npm test
 npm run build
 ```
 
-La suite cubre las acciones del reducer, tolerancia a datos corruptos en la persistencia del carrito, los hooks `useCart`/`useAuth`, y un flujo de carrito y checkout con servicio de pedidos mockeado. Ejecutá `npm test` por separado antes de integrar cambios; el build de Vercel realiza typecheck y compilación, sin ejecutar pruebas unitarias como parte del comando de build.
+La suite cubre las acciones del reducer, tolerancia a datos corruptos en la persistencia del carrito, los hooks `useCart`/`useAuth`, el flujo de checkout con servicio mockeado y la validación de órdenes del lado del servidor. Ejecutá la suite completa por separado: el build de Vercel realiza typecheck y compilación, sin ejecutar pruebas unitarias como parte de `npm run build`. El build de producción no sustituye las pruebas con Firebase/S3 reales.
 
-## Bitácora de uso de IA
+## 10. Bitácora de uso de IA
 
 Las siguientes entradas resumen preguntas y decisiones realizadas durante el desarrollo. Son **síntesis fieles de la conversación, no transcripciones literales**; se incluyen como bitácora de aprendizaje y decisión.
 
@@ -244,6 +252,7 @@ Las siguientes entradas resumen preguntas y decisiones realizadas durante el des
 | Revisar cómo subir imágenes a S3 sin filtrar credenciales. | CORS solo habilita orígenes/métodos web; no reemplaza autorización IAM. Una URL prefirmada concede un permiso limitado y temporal. | Bucket privado, permisos IAM por prefijo `products/*`, Firebase ID token + comprobación de rol y URL prefirmada. |
 | Validar la pureza del reducer y los casos de carrito. | Leer el reloj dentro del reducer introduce una fuente de no determinismo y dificulta testearlo. | Mover `new Date()` al `CartProvider` y pasar el timestamp como parte de la acción. |
 | Diseñar pruebas de hooks y un flujo de compra con servicios mockeados. | Los tests deben verificar comportamiento sin requerir Firebase o AWS reales. | Incorporar Testing Library, `renderHook`, wrapper reutilizable y un servicio de pedido simulado en la integración. |
+| Revisar si un usuario podía manipular precios y totales al crear una orden. | Las reglas que solo validan el tipo numérico y un estado `pending` no demuestran que el total corresponda al catálogo. | Mover la creación a `POST /api/orders`, verificar el token, leer precios desde Firestore, calcular el total en el servidor y denegar la creación directa en las reglas. Agregar tests de validación para cantidades, productos y redondeo. |
 
 ## Lista final de validación en producción
 
@@ -254,11 +263,13 @@ Las siguientes entradas resumen preguntas y decisiones realizadas durante el des
 - [ ] CORS está limitado a localhost y al dominio de producción real.
 - [ ] Bucket privado; usuario IAM con permisos restringidos a `products/*`.
 - [ ] Variables privadas presentes solo en entorno local/servidor de Vercel.
+- [ ] La URL oficial de producción sirve el despliegue correcto sin 500/404 y es accesible sin login de Vercel.
 - [ ] Se puede registrar cliente, agregar artículo, confirmar pedido y ver el historial.
+- [ ] El backend calcula precios/totales de órdenes desde Firestore y las reglas niegan crearlas directamente desde el navegador.
 - [ ] Admin puede crear/editar/eliminar producto con imagen y actualizar un pedido.
 - [ ] `npm test`, `npm run typecheck` y `npm run build` pasan.
 - [ ] Se recorrieron los flujos principales en la URL de producción y en móvil.
 
 ## Importante sobre el estado de entrega
 
-El código y las reglas son parte del repositorio; los servicios externos requieren configuración en tus consolas. No se deben marcar los flujos de producción como verificados hasta ejecutar build/tests y probar ambos roles con las variables reales del proyecto.
+El código y las reglas son parte del repositorio; los servicios externos requieren configuración en tus consolas. El 11 de octubre de 2026 la auditoría comprobó que `https://ecommerce-77.vercel.app` devolvía HTTP 500, aunque un despliegue individual terminaba `Ready` y `https://ecommerce-77-seven.vercel.app` mostraba el catálogo. Hasta que el alias de producción se reconcilie y se repitan las pruebas, no se debe afirmar que la URL oficial ni todos los flujos están verificados. No se deben marcar los flujos de producción como verificados hasta probar ambos roles con las variables reales del proyecto.
