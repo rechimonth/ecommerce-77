@@ -1,5 +1,5 @@
 import { cert, getApps, initializeApp } from "firebase-admin/app";
-import { getAuth } from "firebase-admin/auth";
+import { getAuth, type DecodedIdToken } from "firebase-admin/auth";
 import { FieldValue, getFirestore } from "firebase-admin/firestore";
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import {
@@ -53,7 +53,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
     const input = parseCreateOrderRequest(requestBody);
     const app = getFirebaseAdmin();
-    let decoded;
+    let decoded: DecodedIdToken;
     try {
       decoded = await getAuth(app).verifyIdToken(token);
     } catch {

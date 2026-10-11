@@ -75,7 +75,7 @@ npm run build
 - `npm run dev`: servidor local.
 - `npm run typecheck`: compilación de tipos sin generar archivos.
 - `npm test`: suite Vitest.
-- `npm run build`: typecheck y build de producción.
+- `npm run build`: ejecuta la suite Vitest, después el typecheck y finalmente el build de producción; si falla un test, no se publica un build verde.
 - `npm run seed`: carga los 20 productos iniciales usando credenciales privadas de Firebase Admin.
 
 ## 2. Configurar Firebase Authentication
@@ -238,7 +238,7 @@ npm test
 npm run build
 ```
 
-La suite cubre las acciones del reducer, tolerancia a datos corruptos en la persistencia del carrito, los hooks `useCart`/`useAuth`, el flujo de checkout con servicio mockeado y la validación de órdenes del lado del servidor. Ejecutá la suite completa por separado: el build de Vercel realiza typecheck y compilación, sin ejecutar pruebas unitarias como parte de `npm run build`. El build de producción no sustituye las pruebas con Firebase/S3 reales.
+La suite cubre las acciones del reducer, tolerancia a datos corruptos en la persistencia del carrito, los hooks `useCart`/`useAuth`, el flujo de checkout con servicio mockeado y la validación de órdenes del lado del servidor. El comando `npm run build` empieza por `vitest run`, por lo que Vercel no puede marcar el build como exitoso si los tests fallan. La suite automatizada no sustituye las pruebas de integración contra Firebase/S3 reales.
 
 ## 10. Bitácora de uso de IA
 
