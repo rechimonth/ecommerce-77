@@ -13,10 +13,12 @@ Tienda SPA de moda de inspiración rural y ecuestre, construida como proyecto in
 
 - **Autenticación:** registro/login por correo y contraseña, login con Google y persistencia de sesión con Firebase Auth.
 - **Roles:** `customer` y `admin`. Los nuevos perfiles nacen como customer; la elevación a admin se realiza por un procedimiento manual confiable.
-- **Catálogo:** Firestore, búsqueda por prefijo con debounce, categorías, paginación con cursor y detalle por producto.
+- **Catálogo:** Firestore, búsqueda por prefijo con debounce, navegación visible por categorías, fichas de producto con descripción estructurada y paginación incremental por cursor (`limit` + `startAfter`).
 - **Carrito:** Context API + `useReducer`, total derivado y persistencia en Firestore por UID. Los invitados conservan el carrito en localStorage y se combina al iniciar sesión.
 - **Compra:** checkout de simulación, creación de orden `pending`, historial propio y detalle del pedido. La orden se crea a través de `POST /api/orders`, que verifica la sesión, vuelve a leer los productos en Firestore y calcula precios y total en el servidor.
 - **Administración:** CRUD de productos, carga de imágenes en S3 mediante URL prefirmada, listado/filtro de pedidos y actualización del estado.
+- **Reviews y ratings:** opiniones públicas por producto; cada usuario autenticado mantiene una sola opinión por producto, con rating entero de 1 a 5 y comentario validado por reglas de Firestore.
+- **Dashboard de analytics:** ingresos históricos agregados desde pedidos completados, pedidos pendientes, conteo de productos, barras de ingresos de los últimos 7 días y ranking por unidades en los 100 pedidos completados más recientes. El alcance del ranking se etiqueta en pantalla.
 - **Seguridad:** reglas de Firestore por usuario/rol; las órdenes no se pueden crear directamente desde el navegador; los endpoints serverless validan el token Firebase antes de operar.
 - **Testing:** Vitest, React Testing Library, wrapper de providers, pruebas del reducer, hooks y un flujo de carrito/checkout.
 - **Deploy:** Vite SPA en Vercel y función backend en `api/s3/presign.ts`.
@@ -29,12 +31,12 @@ React 18 · TypeScript · Vite · Tailwind CSS 4 · React Router · Firebase Aut
 
 ```text
 src/
-├── components/      # UI reutilizable, estados, auth, catálogo, carrito y layout
+├── components/      # UI reutilizable, auth, catálogo, reseñas, carrito y layout
 ├── pages/           # Pantallas del cliente y del administrador
 ├── layouts/         # Layout de tienda y layout admin
 ├── contexts/        # Providers independientes para auth, catálogo y carrito
 ├── hooks/           # useAuth, useCart y debounce
-├── services/        # Acceso a Firestore y flujo de imágenes S3
+├── services/        # Catálogo, pedidos, analytics, reviews y flujo de imágenes S3
 ├── types/           # Modelos de producto, usuario, carrito y orden
 ├── config/          # Configuración pública del SDK web de Firebase
 └── test/            # Setup y wrapper para pruebas
