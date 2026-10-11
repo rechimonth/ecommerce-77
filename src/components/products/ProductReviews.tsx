@@ -116,6 +116,8 @@ export function ProductReviews({ productId }: { productId: string }) {
         <div>
           {loading ? (
             <p className="py-6 text-sm text-neutral-500">Cargando opiniones…</p>
+          ) : error ? (
+            <p className="py-6 text-sm text-neutral-500">Las opiniones no están disponibles temporalmente.</p>
           ) : reviews.length === 0 ? (
             <p className="border-y border-neutral-200 py-6 text-sm text-neutral-600">Todavía no hay opiniones. Sé la primera persona en compartir su experiencia.</p>
           ) : (
