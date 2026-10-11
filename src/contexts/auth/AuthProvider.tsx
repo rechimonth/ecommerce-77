@@ -8,28 +8,23 @@ import {
 } from "firebase/auth";
 import { doc, getDoc, serverTimestamp, setDoc } from "firebase/firestore";
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
-import { auth, db, googleProvider } from "../../config/firebase";
+import { auth, db, googleProvider, missingFirebaseVariables } from "../../config/firebase";
 import type { AuthContextValue, UserProfile, UserRole } from "../../types/user.types";
 import { AuthContext } from "./AuthContext";
+import {
+  AuthOperationError,
+  getAuthErrorCode,
+  toAuthOperationError,
+} from "./authErrors";
 
-// Traduce algunos errores habituales de Firebase a mensajes que una persona pueda resolver.
-// Convierte códigos de Firebase en texto accionable y evita exponer errores internos crudos.
-function authErrorMessage(error: unknown): string {
-  const code = typeof error === "object" && error !== null && "code" in error
-    ? String((error as { code: unknown }).code)
-    : "";
-  const messages: Record<string, string> = {
-    "auth/invalid-email": "El correo electrónico no tiene un formato válido.",
-    "auth/user-not-found": "No encontramos una cuenta con ese correo.",
-    "auth/wrong-password": "La contraseña no es correcta.",
-    "auth/invalid-credential": "El correo o la contraseña son incorrectos.",
-    "auth/email-already-in-use": "Ya existe una cuenta con ese correo.",
-    "auth/weak-password": "Elegí una contraseña de al menos 6 caracteres.",
-    "auth/popup-closed-by-user": "Se cerró la ventana de Google antes de terminar.",
-    "auth/too-many-requests": "Hubo demasiados intentos. Esperá un momento y volvé a probar.",
-    "auth/operation-not-allowed": "Este método de acceso todavía no está habilitado en Firebase.",
-  };
-  return messages[code] ?? "No pudimos completar la autenticación. Revisá tu conexión y la configuración de Firebase.";
+// Evita llamadas remotas confusas cuando el build se generó sin la configuración web mínima.
+function assertFirebaseClientConfigured(): void {
+  if (missingFirebaseVariables.length > 0) {
+    throw new AuthOperationError(
+      `Falta configuración de Firebase: ${missingFirebaseVariables.join(", ")}.`,
+      "config/missing-firebase-variables",
+    );
+  }
 }
 
 // Crea un perfil de cliente solo si todavía no existe; nunca degrada a un administrador.
@@ -83,12 +78,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setProfile(nextProfile);
           setError(null);
         }
-      } catch {
+      } catch (cause) {
         if (active) {
           // Fallar cerrado: sin perfil válido no se concede acceso administrativo.
+          // Se muestra solo el código, no el mensaje interno completo del SDK.
+          const code = getAuthErrorCode(cause);
           setUser(firebaseUser);
           setProfile(null);
-          setError("No pudimos leer tu perfil en Firestore. Verificá las reglas y volvé a iniciar sesión.");
+          setError(
+            `No pudimos leer tu perfil en Firestore. Verificá las reglas y volvé a iniciar sesión.${code ? ` (código técnico: ${code})` : ""}`,
+          );
         }
       } finally {
         if (active) setIsLoading(false);
@@ -100,15 +99,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  // Inicia sesión con credenciales y publica un error legible si Firebase rechaza el intento.
+  // Inicia sesión con correo; conserva el código Firebase en los errores retornados al formulario.
   const signInWithEmail = useCallback(async (email: string, password: string) => {
     setError(null);
     try {
+      assertFirebaseClientConfigured();
       await signInWithEmailAndPassword(auth, email.trim(), password);
     } catch (cause) {
-      const message = authErrorMessage(cause);
-      setError(message);
-      throw new Error(message);
+      const actionError = toAuthOperationError(cause);
+      setError(actionError.message);
+      throw actionError;
     }
   }, []);
 
@@ -116,6 +116,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const registerWithEmail = useCallback(async (name: string, email: string, password: string) => {
     setError(null);
     try {
+      assertFirebaseClientConfigured();
       const credential = await createUserWithEmailAndPassword(auth, email.trim(), password);
       await updateProfile(credential.user, { displayName: name.trim() });
       const profile: UserProfile = {
@@ -130,9 +131,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
       setProfile(profile);
     } catch (cause) {
-      const message = authErrorMessage(cause);
-      setError(message);
-      throw new Error(message);
+      const actionError = toAuthOperationError(cause);
+      setError(actionError.message);
+      throw actionError;
     }
   }, []);
 
@@ -140,11 +141,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signInWithGoogle = useCallback(async () => {
     setError(null);
     try {
+      assertFirebaseClientConfigured();
       await signInWithPopup(auth, googleProvider);
     } catch (cause) {
-      const message = authErrorMessage(cause);
-      setError(message);
-      throw new Error(message);
+      const actionError = toAuthOperationError(cause);
+      setError(actionError.message);
+      throw actionError;
     }
   }, []);
 
@@ -154,9 +156,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       await firebaseSignOut(auth);
     } catch (cause) {
-      const message = authErrorMessage(cause);
-      setError(message);
-      throw new Error(message);
+      const actionError = toAuthOperationError(cause);
+      setError(actionError.message);
+      throw actionError;
     }
   }, []);
 
