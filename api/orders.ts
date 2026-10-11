@@ -7,7 +7,7 @@ import {
   OrderValidationError,
   parseCreateOrderRequest,
   type CanonicalProductForOrder,
-} from "../src/services/orderValidation";
+} from "../src/services/orderValidation.ts";
 
 function getFirebaseAdmin() {
   if (getApps().length) return getApps()[0]!;
