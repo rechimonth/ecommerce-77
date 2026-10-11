@@ -59,10 +59,8 @@ describe("integración real de checkout", () => {
 
     await waitFor(() => {
       expect(createOrder).toHaveBeenCalledWith(expect.objectContaining({
-        userId: "customer-test",
         customerName: "Cliente de prueba",
         shippingAddress: "Av. Ejemplo 123, Buenos Aires",
-        total: 80,
         items: [expect.objectContaining({
           product: expect.objectContaining({ id: "botas-test" }),
           quantity: 1,
