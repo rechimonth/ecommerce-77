@@ -38,7 +38,10 @@ service cloud.firestore {
         && request.resource.data.uid == userId
         && request.resource.data.role == 'customer';
       allow update: if isAdmin()
-        || (signedIn() && request.auth.uid == userId
+        || (signedIn()
+          && request.auth.uid == userId
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['email', 'displayName'])
+          && request.resource.data.uid == resource.data.uid
           && request.resource.data.role == resource.data.role);
       allow delete: if isAdmin();
     }

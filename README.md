@@ -238,7 +238,7 @@ npm test
 npm run build
 ```
 
-La suite cubre las acciones del reducer, tolerancia a datos corruptos en la persistencia del carrito, los hooks `useCart`/`useAuth`, el flujo de checkout con servicio mockeado y la validación de órdenes del lado del servidor. El comando `npm run build` empieza por `vitest run`, por lo que Vercel no puede marcar el build como exitoso si los tests fallan. La suite automatizada no sustituye las pruebas de integración contra Firebase/S3 reales.
+La suite cubre las acciones del reducer, tolerancia a datos corruptos en la persistencia del carrito, los hooks `useCart`/`useAuth`, el flujo de checkout con servicio mockeado, la validación de órdenes del lado del servidor y el servicio de imágenes S3 (token, URL prefirmada, rechazo de archivos grandes y lectura temporal). El comando `npm run build` empieza por `vitest run`, por lo que Vercel no puede marcar el build como exitoso si los tests fallan. La suite automatizada no sustituye las pruebas de integración contra Firebase/S3 reales.
 
 ## 10. Bitácora de uso de IA
 
