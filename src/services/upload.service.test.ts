@@ -28,6 +28,26 @@ describe("servicio de imágenes S3", () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
+  it("rechaza formatos que S3 no admite antes de pedir una URL", async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+    const unsupportedFile = new File(["image-bytes"], "animated.gif", { type: "image/gif" });
+
+    await expect(uploadProductImage(unsupportedFile, "test-id-token"))
+      .rejects.toThrow(/Formato no permitido/);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("rechaza imágenes vacías antes de pedir una URL", async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+    const emptyFile = new File([], "empty.png", { type: "image/png" });
+
+    await expect(uploadProductImage(emptyFile, "test-id-token"))
+      .rejects.toThrow(/no estar vacía/);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
   it("solicita una URL con el token Firebase y sube el archivo por PUT", async () => {
     const fetchMock = vi.fn()
       .mockResolvedValueOnce(response({

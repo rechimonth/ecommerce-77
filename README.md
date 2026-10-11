@@ -2,7 +2,8 @@
 
 Tienda SPA de moda de inspiración rural y ecuestre, construida como proyecto integrador de FullTime 77. Combina una experiencia editorial mobile-first con catálogo en Firestore, autenticación Firebase, checkout simulado, gestión de pedidos y panel administrativo.
 
-**Producción:** https://ecommerce-77.vercel.app *(revisar y reemplazar por el dominio exacto que figure en Settings → Domains de tu proyecto Vercel).*  
+**Demo pública verificada:** https://ecommerce-77-seven.vercel.app  
+**Nota de dominio:** el alias `ecommerce-77.vercel.app` sigue ocupado y no aparece bajo el ámbito Vercel disponible en esta sesión. La URL de demo de arriba es la que se probó públicamente; no uses el alias canónico hasta reasignarlo desde la cuenta que lo posee.
 **Repositorio:** https://github.com/rechimonth/ecommerce-77  
 **Consola Firebase:** https://console.firebase.google.com/u/0/project/ecommerce--77
 
@@ -83,7 +84,7 @@ npm run build
 1. Abrí [Firebase Authentication](https://console.firebase.google.com/u/0/project/ecommerce--77/authentication).
 2. Entrá en **Get started / Comenzar**, si aparece ese botón.
 3. En **Sign-in method / Método de acceso**, habilitá **Email/Password (Correo electrónico/Contraseña)** y **Google**.
-4. En los ajustes de Authentication, revisá **Authorized domains / Dominios autorizados**. Agregá el dominio exacto que Vercel muestre en la pestaña **Settings → Domains**, y `localhost` para desarrollo local.
+4. En los ajustes de Authentication, revisá **Authorized domains / Dominios autorizados**. Agregá `ecommerce-77-seven.vercel.app` y `localhost` para desarrollo local. La respuesta HTTP pública no prueba por sí sola que Google Authentication esté configurado para ese dominio.
 5. En **Firestore Database**, verificá que la base de datos esté creada. Si todavía no existe, creala en la región que prefieras (idealmente la misma para todos los recursos regionales).
 
 La configuración web que pegaste se representa en el archivo de entorno con estos nombres:
@@ -134,7 +135,7 @@ En S3 → bucket → **Permissions**:
 
 ### Configurar CORS
 
-En S3 → bucket → **Permissions → Cross-origin resource sharing (CORS)**, guardá esta configuración JSON. El CORS se verificó y actualmente permite `https://ecommerce-77.vercel.app` y `http://localhost:5173`. Si Vercel muestra otro dominio en Settings → Domains, agregalo explícitamente sin barra al final.
+En S3 → bucket → **Permissions → Cross-origin resource sharing (CORS)**, guardá esta configuración para la demo pública actual. Las pruebas realizadas confirmaron que Vercel sirve la app, pero no verificaron una subida real a S3; por eso hay que confirmar que este origen esté guardado en el bucket antes de dar el upload por validado.
 
 ```json
 [
@@ -143,7 +144,7 @@ En S3 → bucket → **Permissions → Cross-origin resource sharing (CORS)**, g
     "AllowedMethods": ["PUT", "GET", "HEAD"],
     "AllowedOrigins": [
       "http://localhost:5173",
-      "https://ecommerce-77.vercel.app"
+      "https://ecommerce-77-seven.vercel.app"
     ],
     "ExposeHeaders": ["ETag"],
     "MaxAgeSeconds": 3000
@@ -242,17 +243,17 @@ La suite cubre las acciones del reducer, tolerancia a datos corruptos en la pers
 
 ## 10. Bitácora de uso de IA
 
-Las siguientes entradas resumen preguntas y decisiones realizadas durante el desarrollo. Son **síntesis fieles de la conversación, no transcripciones literales**; se incluyen como bitácora de aprendizaje y decisión.
+Esta bitácora registra consultas técnicas, aprendizaje, decisión humana y evidencia verificable del resultado. Las preguntas están **reformuladas de manera fiel para describir las decisiones** y no se presentan como transcripciones literales de prompts que no quedaron guardados textualmente.
 
-| Tema / consulta | Aprendizaje obtenido | Decisión aplicada |
+| Pregunta técnica revisada | Qué aprendí al evaluar alternativas | Decisión humana y evidencia en el proyecto |
 | --- | --- | --- |
-| Revisar `Proyecto.txt`, `Clases.txt` y el repositorio para separar lo existente de lo faltante. | Un catálogo funcional no cubría el resto de la rúbrica: identidad, pedidos, roles, administración y pruebas de integración. | Completar primero requisitos obligatorios y posponer analytics/reviews. |
-| Consultar qué servicios estaban preparados: Firebase, S3 y Vercel. | Tener el proyecto/bucket creados no demuestra que Auth, CORS, permisos o variables de servidor estén listos. | Documentar una lista de comprobación manual y no afirmar que una configuración externa fue validada si no se pudo acceder a la consola. |
-| Mantener los productos de moda rural y cambiar la moneda a USD. | La presentación de precio debe ser consistente en ficha, carrito, checkout, órdenes y admin. | Centralizar el formato con `formatPrice` en lugar de cambiar moneda por pantalla. |
-| Revisar cómo subir imágenes a S3 sin filtrar credenciales. | CORS solo habilita orígenes/métodos web; no reemplaza autorización IAM. Una URL prefirmada concede un permiso limitado y temporal. | Bucket privado, permisos IAM por prefijo `products/*`, Firebase ID token + comprobación de rol y URL prefirmada. |
-| Validar la pureza del reducer y los casos de carrito. | Leer el reloj dentro del reducer introduce una fuente de no determinismo y dificulta testearlo. | Mover `new Date()` al `CartProvider` y pasar el timestamp como parte de la acción. |
-| Diseñar pruebas de hooks y un flujo de compra con servicios mockeados. | Los tests deben verificar comportamiento sin requerir Firebase o AWS reales. | Incorporar Testing Library, `renderHook`, wrapper reutilizable y un servicio de pedido simulado en la integración. |
-| Revisar si un usuario podía manipular precios y totales al crear una orden. | Las reglas que solo validan el tipo numérico y un estado `pending` no demuestran que el total corresponda al catálogo. | Mover la creación a `POST /api/orders`, verificar el token, leer precios desde Firestore, calcular el total en el servidor y denegar la creación directa en las reglas. Agregar tests de validación para cantidades, productos y redondeo. |
+| ¿Qué necesita la entrega además de una tienda que solo lista productos? | La consigna exige dos roles, Auth, persistencia en Firestore, checkout simulado, panel admin, S3 seguro, pruebas y deploy accesible. | Priorizo requisitos obligatorios sobre los extras; las rutas están en `src/App.tsx` y la lista de requisitos/configuración en este README. |
+| ¿Alcanza con ocultar las rutas admin en React para proteger los datos? | No: un usuario puede llamar a Firestore o a una función directamente, sin utilizar los botones ni la navegación de la UI. | Mantengo los guards en frontend, las reglas en `firestore.rules` y la verificación server-side de roles en las funciones. No permito que el registro público establezca `role: admin`. |
+| ¿Cómo impido que el navegador invente un total o una identidad al confirmar un pedido? | Los importes, usuario y email enviados desde el navegador no son una fuente de verdad. Las pruebas deben incluir valores manipulados, stock insuficiente y productos inexistentes. | `api/orders.ts` verifica el Firebase ID token, lee los productos de Firestore y calcula el total en centavos. `src/services/orderValidation.test.ts` cubre estos casos y `firestore.rules` bloquea la creación directa desde el cliente. |
+| ¿Cómo mantengo el carrito predecible y verifico sus acciones? | Un reducer puro permite calcular el total derivado y probar cada acción sin conexión a Firebase. | Conservo Context API + `useReducer`; los tests de reducer, persistencia, merge y hooks aíslan estas decisiones de la red. |
+| ¿Cómo permite el administrador subir imágenes sin exponer credenciales AWS? | La firma de URL temporal debe ocurrir en el servidor después de validar sesión y rol. CORS no reemplaza la autorización IAM. | Mantengo AWS en `api/s3/presign.ts`, bucket privado y URL prefirmada; `src/services/upload.service.test.ts` verifica autorización, transferencia y errores. También se rechazan temprano formatos no admitidos y archivos vacíos. |
+| ¿Qué causaba el HTTP 500 del endpoint de pedidos en producción? | Los logs identificaron `ERR_MODULE_NOT_FOUND`: el runtime ESM no encontraba el módulo TypeScript importado sin extensión. Un build verde por sí solo no demuestra que el endpoint cargue correctamente. | Cambié el import a `../src/services/orderValidation.ts` en el commit [1769444](https://github.com/rechimonth/ecommerce-77/commit/17694441d87c4eef541ae6a320add506aa6d375b), esperé el check Vercel `success` y repetí la llamada: GET devuelve `405` en vez de `500`. |
+| ¿Cómo distinguir un deploy accesible de una integración real con Firebase/S3? | `200` para el HTML confirma hosting, no autenticación, permisos, escritura en Firestore ni carga a S3. | Probé la URL pública y la protección de los endpoints sin crear órdenes ni subir archivos. Dejé los flujos autenticados como pendientes explícitos hasta probarlos con cuentas y servicios reales. |
 
 ## Lista final de validación en producción
 
@@ -270,6 +271,16 @@ Las siguientes entradas resumen preguntas y decisiones realizadas durante el des
 - [ ] `npm test`, `npm run typecheck` y `npm run build` pasan.
 - [ ] Se recorrieron los flujos principales en la URL de producción y en móvil.
 
-## Importante sobre el estado de entrega
+## Estado de entrega comprobado
 
-El código y las reglas son parte del repositorio; los servicios externos requieren configuración en tus consolas. El 11 de octubre de 2026 la auditoría comprobó que `https://ecommerce-77.vercel.app` devolvía HTTP 500, aunque un despliegue individual terminaba `Ready` y `https://ecommerce-77-seven.vercel.app` mostraba el catálogo. Hasta que el alias de producción se reconcilie y se repitan las pruebas, no se debe afirmar que la URL oficial ni todos los flujos están verificados. No se deben marcar los flujos de producción como verificados hasta probar ambos roles con las variables reales del proyecto.
+Comprobaciones realizadas el 11 de octubre de 2026:
+
+- La URL pública de demo `https://ecommerce-77-seven.vercel.app/` y la ruta `/products` responden HTTP 200 sin bypass; `/api/orders` responde HTTP 405 a GET.
+- En el despliegue nuevo, `GET /api/orders` y `GET /api/s3/presign` responden HTTP 405. Un POST sin token devuelve el mensaje de autenticación y no crea una orden ni sube una imagen.
+- El error ESM del import se corrigió en el commit [1769444](https://github.com/rechimonth/ecommerce-77/commit/17694441d87c4eef541ae6a320add506aa6d375b). Vercel reportó estado `success` para ese commit, y la prueba runtime posterior confirmó la corrección.
+- Según la salida de Firebase CLI compartida durante el desarrollo, las reglas de Firestore e índices fueron desplegados correctamente a `ecommerce--77`.
+- El alias `ecommerce-77.vercel.app` sigue sin estar disponible bajo el ámbito de Vercel usado para esta app. Para la demostración, usa la URL pública listada al inicio.
+
+Queda una validación manual indispensable antes de declarar todos los flujos listos: confirmar las variables de entorno de producción (sin revelar sus valores), agregar `ecommerce-77-seven.vercel.app` a los dominios autorizados de Firebase Auth, verificar/guardar el CORS de S3 para ese origen y probar con cuentas reales ambos roles (registro/login, carrito, orden en Firestore, historial, CRUD admin, upload y cambio de estado). Las respuestas HTTP y el build no sustituyen esa prueba end-to-end autenticada.
+
+El checkout es simulado por consigna y no cobra dinero. No se deben pegar claves privadas, tokens de bypass ni valores secretos en README, GitHub o chats.

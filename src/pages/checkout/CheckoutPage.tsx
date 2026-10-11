@@ -31,8 +31,12 @@ export function CheckoutPage() {
       });
       clearCart();
       navigate(`/orders/${orderId}`, { replace: true });
-    } catch {
-      setError("No pudimos crear el pedido. Tu carrito sigue guardado; revisá la conexión y probá otra vez.");
+    } catch (cause) {
+      setError(
+        cause instanceof Error && cause.message.trim()
+          ? cause.message
+          : "No pudimos crear el pedido. Tu carrito sigue guardado; revisá la conexión y probá otra vez.",
+      );
     } finally {
       setSubmitting(false);
     }
