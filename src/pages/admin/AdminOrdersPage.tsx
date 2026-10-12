@@ -4,6 +4,17 @@ import { listAdminOrders, updateOrderStatus } from "../../services/orders.servic
 import { ORDER_STATUSES, ORDER_STATUS_LABELS, type CustomerOrder, type OrderStatus } from "../../types/order.types";
 import { formatPrice } from "../../utils/formatPrice";
 
+// Los estados finales no se pueden revertir desde el panel.
+function availableStatusTransitions(current: OrderStatus): OrderStatus[] {
+  const transitions: Record<OrderStatus, OrderStatus[]> = {
+    pending: ["processing", "completed", "cancelled"],
+    processing: ["completed", "cancelled"],
+    completed: [],
+    cancelled: [],
+  };
+  return [current, ...transitions[current]];
+}
+
 // Una única vista para consultar pedidos y cambiar sus estados permitidos.
 export function AdminOrdersPage() {
   const [status, setStatus] = useState<OrderStatus | "all">("all");
@@ -30,8 +41,10 @@ export function AdminOrdersPage() {
     try {
       await updateOrderStatus(orderId, nextStatus);
       await loadOrders();
-    } catch {
-      setError("No se pudo cambiar el estado. La base de datos debe confirmar el rol de administrador.");
+    } catch (cause) {
+      setError(cause instanceof Error
+        ? cause.message
+        : "No se pudo cambiar el estado. Comprobá el rol administrador y las reglas de Firestore.");
     } finally { setSavingId(null); }
   }
 
@@ -42,7 +55,7 @@ export function AdminOrdersPage() {
       <label className="grid gap-1 text-xs font-bold">Filtrar por estado
         <select value={status} onChange={(event) => setStatus(event.target.value as OrderStatus | "all")} className="h-10 rounded border border-neutral-300 px-3 text-sm font-normal">
           <option value="all">Todos los estados</option>
-          {ORDER_STATUSES.map((item) => <option key={item} value={item}>{ORDER_STATUS_LABELS[item]}</option>)}
+          {availableStatusTransitions(order.status).map((item) => <option key={item} value={item}>{ORDER_STATUS_LABELS[item]}</option>)}
         </select>
       </label>
     </div>
@@ -51,7 +64,7 @@ export function AdminOrdersPage() {
       {orders.map((order) => <article key={order.id} className="grid gap-3 border border-neutral-200 p-4 lg:grid-cols-[1fr_auto] lg:items-center">
         <div><p className="font-black">#{order.id.slice(0, 8).toUpperCase()} · {formatPrice(order.total)}</p><p className="mt-1 text-sm">{order.customerName} <span className="text-neutral-400">·</span> {order.email}</p><p className="mt-1 text-xs text-neutral-500">{order.createdAt?.toLocaleString("es-AR") ?? "Fecha pendiente"} · {order.items.length} artículos</p><p className="mt-2 whitespace-pre-wrap text-xs text-neutral-500">{order.shippingAddress}</p></div>
         <label className="grid gap-1 text-xs font-bold">Estado del pedido
-          <select disabled={savingId === order.id} value={order.status} onChange={(event) => void changeStatus(order.id, event.target.value as OrderStatus)} className="h-10 rounded border border-neutral-300 px-3 text-sm font-normal disabled:opacity-50">
+          <select disabled={savingId === order.id || order.status === "completed" || order.status === "cancelled"} value={order.status} onChange={(event) => void changeStatus(order.id, event.target.value as OrderStatus)} className="h-10 rounded border border-neutral-300 px-3 text-sm font-normal disabled:opacity-50">
             {ORDER_STATUSES.map((item) => <option key={item} value={item}>{ORDER_STATUS_LABELS[item]}</option>)}
           </select>
           {savingId === order.id && <span className="text-neutral-500">Guardando…</span>}

@@ -86,7 +86,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const userSnapshot = await transaction.get(userRef);
       const userProfile = userSnapshot.data();
       if (!userSnapshot.exists || (userProfile?.role !== "customer" && userProfile?.role !== "admin")) {
-        throw new OrderValidationError("No pudimos verificar tu perfil para crear el pedido.", 400);
+        throw new OrderValidationError("No pudimos verificar tu perfil para crear el pedido.", 403);
       }
 
       const productSnapshots = [];

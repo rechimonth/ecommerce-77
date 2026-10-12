@@ -122,7 +122,7 @@ export async function updateOrderStatus(orderId: string, status: OrderStatus): P
       if (!entry.snapshot.exists()) continue;
       const stock = entry.snapshot.data().stock;
       const quantity = quantities.get(entry.productId) ?? 0;
-      if (!Number.isSafeInteger(stock) || stock < 0 || !Number.isSafeInteger(stock + quantity)) {
+      if (typeof stock !== "number" || !Number.isSafeInteger(stock) || stock < 0 || !Number.isSafeInteger(stock + quantity)) {
         throw new Error("El inventario de un producto es inválido; no se puede cancelar este pedido de forma segura.");
       }
       transaction.update(entry.snapshot.ref, {

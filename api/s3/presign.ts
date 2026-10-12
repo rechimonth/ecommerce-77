@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { GetObjectCommand, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { cert, getApps, initializeApp } from "firebase-admin/app";
-import { getAuth } from "firebase-admin/auth";
+import { getAuth, type DecodedIdToken } from "firebase-admin/auth";
 import { getFirestore } from "firebase-admin/firestore";
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 
@@ -92,7 +92,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (!token) return respondError(res, 401, "Iniciá sesión para subir imágenes.");
 
     const app = getFirebaseAdmin();
-    let decoded: Awaited<ReturnType<ReturnType<typeof getAuth>["verifyIdToken"]>>;
+    let decoded: DecodedIdToken;
     try {
       decoded = await getAuth(app).verifyIdToken(token);
     } catch (error) {
