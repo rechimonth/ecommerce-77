@@ -1,6 +1,17 @@
 import { act, renderHook } from "@testing-library/react";
 import type { PropsWithChildren } from "react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+
+// This is a provider/reducer unit test, not a Firebase integration test.
+// Avoid initializing the real Auth SDK or depending on local VITE_FIREBASE_* values.
+vi.mock("../config/firebase", () => ({
+  app: {},
+  auth: { currentUser: null },
+  db: {},
+  googleProvider: {},
+  missingFirebaseVariables: [],
+}));
+
 import { CartProvider } from "../contexts/cart";
 import { useCart } from "./useCart";
 import type { Product } from "../types/product.types";
