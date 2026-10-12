@@ -222,7 +222,9 @@ firebase deploy --project ecommerce--77 --only firestore:rules,firestore:indexes
 3. La función firma una URL de S3 para un objeto nuevo bajo `products/{uid}/` y devuelve la clave y la URL de subida, con vencimiento corto.
 4. El navegador hace `PUT` del archivo directamente a esa URL, enviando el encabezado `Content-Type` que fue firmado.
 5. El producto guarda un identificador `s3://products/...`, no una URL temporal.
-6. Para mostrar la imagen, el navegador solicita otra URL prefirmada de lectura. La URL de lectura expira y el objeto sigue privado.
+6. Para mostrar la imagen, el navegador solicita otra URL prefirmada de lectura. La URL de lectura expira a los 15 minutos y el objeto sigue privado.
+
+**Alcance del endpoint de lectura:** `POST /api/s3/presign` con `action: "get"` no requiere iniciar sesión porque las imágenes del catálogo son públicas. Aun así, solo firma claves bajo `products/` y rechaza claves con `..` o de más de 500 caracteres. La ruta no tiene rate limiting específico; la URL temporal permite leer el objeto correspondiente durante un máximo de 15 minutos. No uses esta ruta para archivos privados de clientes ni documentos sensibles.
 
 Las credenciales de AWS existen solo en el servidor. Si la subida falla por CORS, revisá que el origen coincide exactamente con el dominio usado (incluido `https`) y que `Content-Type` coincida con el enviado a S3.
 
