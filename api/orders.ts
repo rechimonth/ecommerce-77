@@ -27,7 +27,18 @@ function respondError(res: VercelResponse, status: number, message: string) {
   return res.status(status).json({ error: message });
 }
 
-// El servidor verifica identidad y precios; el navegador no puede fijar el importe de una orden.
+function isInvalidTokenError(error: unknown): boolean {
+  if (!error || typeof error !== "object" || !("code" in error)) return false;
+  return new Set([
+    "auth/argument-error",
+    "auth/id-token-expired",
+    "auth/invalid-id-token",
+    "auth/id-token-revoked",
+    "auth/invalid-user-token",
+  ]).has(String((error as { code?: unknown }).code ?? ""));
+}
+
+// El servidor valida identidad/precios y descuenta inventario en la misma transacción que crea la orden.
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   res.setHeader("Cache-Control", "no-store");
   if (req.method !== "POST") {
@@ -53,49 +64,80 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
     const input = parseCreateOrderRequest(requestBody);
     const app = getFirebaseAdmin();
+    const auth = getAuth(app);
     let decoded: DecodedIdToken;
     try {
-      decoded = await getAuth(app).verifyIdToken(token);
-    } catch {
-      return respondError(res, 401, "La sesión venció. Volvé a iniciar sesión.");
+      decoded = await auth.verifyIdToken(token);
+    } catch (error) {
+      if (isInvalidTokenError(error)) {
+        return respondError(res, 401, "La sesión venció. Volvé a iniciar sesión.");
+      }
+      throw error;
     }
 
     const db = getFirestore(app);
-    const userSnapshot = await db.doc(`users/${decoded.uid}`).get();
-    const userProfile = userSnapshot.data();
-    if (!userSnapshot.exists || (userProfile?.role !== "customer" && userProfile?.role !== "admin")) {
-      return respondError(res, 403, "No pudimos verificar tu perfil para crear el pedido.");
-    }
-
+    const userRef = db.doc(`users/${decoded.uid}`);
     const productRefs = input.items.map((item) => db.collection("products").doc(item.productId));
-    const productSnapshots = await db.getAll(...productRefs);
-    const canonicalProducts: CanonicalProductForOrder[] = productSnapshots
-      .filter((snapshot) => snapshot.exists)
-      .map((snapshot) => ({
-        id: snapshot.id,
-        name: snapshot.get("name"),
-        image: snapshot.get("image"),
-        price: snapshot.get("price"),
-        stock: snapshot.get("stock"),
-      }));
-    const order = buildCanonicalOrder(input.items, canonicalProducts);
-    const email = typeof decoded.email === "string"
-      ? decoded.email
-      : typeof userProfile.email === "string" ? userProfile.email : "";
+    const orderRef = db.collection("orders").doc();
 
-    const orderRef = await db.collection("orders").add({
-      userId: decoded.uid,
-      customerName: input.customerName,
-      email,
-      shippingAddress: input.shippingAddress,
-      items: order.items,
-      total: order.total,
-      status: "pending",
-      createdAt: FieldValue.serverTimestamp(),
-      updatedAt: FieldValue.serverTimestamp(),
+    const total = await db.runTransaction(async (transaction) => {
+      // Todo se vuelve a leer en la transacción: las validaciones previas a una compra
+      // concurrente no sirven para garantizar disponibilidad del último artículo.
+      const userSnapshot = await transaction.get(userRef);
+      const userProfile = userSnapshot.data();
+      if (!userSnapshot.exists || (userProfile?.role !== "customer" && userProfile?.role !== "admin")) {
+        throw new OrderValidationError("No pudimos verificar tu perfil para crear el pedido.", 400);
+      }
+
+      const productSnapshots = [];
+      for (const productRef of productRefs) {
+        productSnapshots.push(await transaction.get(productRef));
+      }
+      const canonicalProducts: CanonicalProductForOrder[] = productSnapshots
+        .filter((snapshot) => snapshot.exists)
+        .map((snapshot) => ({
+          id: snapshot.id,
+          name: snapshot.get("name"),
+          image: snapshot.get("image"),
+          price: snapshot.get("price"),
+          stock: snapshot.get("stock"),
+        }));
+      const order = buildCanonicalOrder(input.items, canonicalProducts);
+
+      // Las lecturas terminan antes de iniciar las escrituras de Firestore.
+      for (const line of order.items) {
+        const productSnapshot = productSnapshots.find((snapshot) => snapshot.id === line.productId);
+        if (!productSnapshot?.exists) {
+          throw new OrderValidationError("Uno de los productos ya no existe en el catálogo.", 409);
+        }
+        const stock = productSnapshot.get("stock");
+        if (typeof stock !== "number" || !Number.isSafeInteger(stock) || stock < line.quantity) {
+          throw new OrderValidationError(`No hay stock suficiente para «${line.name}».`, 409);
+        }
+        transaction.update(productSnapshot.ref, {
+          stock: stock - line.quantity,
+          updatedAt: FieldValue.serverTimestamp(),
+        });
+      }
+
+      const email = typeof decoded.email === "string"
+        ? decoded.email
+        : typeof userProfile.email === "string" ? userProfile.email : "";
+      transaction.set(orderRef, {
+        userId: decoded.uid,
+        customerName: input.customerName,
+        email,
+        shippingAddress: input.shippingAddress,
+        items: order.items,
+        total: order.total,
+        status: "pending",
+        createdAt: FieldValue.serverTimestamp(),
+        updatedAt: FieldValue.serverTimestamp(),
+      });
+      return order.total;
     });
 
-    return res.status(201).json({ orderId: orderRef.id, total: order.total });
+    return res.status(201).json({ orderId: orderRef.id, total });
   } catch (error) {
     if (error instanceof OrderValidationError) {
       return respondError(res, error.statusCode, error.message);

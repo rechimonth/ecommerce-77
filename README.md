@@ -15,12 +15,12 @@ Tienda SPA de moda de inspiración rural y ecuestre, construida como proyecto in
 - **Roles:** `customer` y `admin`. Los nuevos perfiles nacen como customer; la elevación a admin se realiza por un procedimiento manual confiable.
 - **Catálogo:** Firestore, búsqueda por prefijo con debounce, navegación visible por categorías, fichas de producto con descripción estructurada y paginación incremental por cursor (`limit` + `startAfter`).
 - **Carrito:** Context API + `useReducer`, total derivado y persistencia en Firestore por UID. Los invitados conservan el carrito en localStorage y se combina al iniciar sesión.
-- **Compra:** checkout de simulación, creación de orden `pending`, historial propio y detalle del pedido. La orden se crea a través de `POST /api/orders`, que verifica la sesión, vuelve a leer los productos en Firestore y calcula precios y total en el servidor.
+- **Compra:** checkout de simulación, creación de orden `pending`, historial propio y detalle del pedido. `POST /api/orders` verifica la sesión, recalcula importes canónicos y crea la orden mientras descuenta el stock dentro de una transacción de Firestore; así se evita vender simultáneamente la última unidad dos veces. Al cancelar un pedido pendiente o en preparación, la operación administrativa repone el stock en una transacción.
 - **Administración:** CRUD de productos, carga de imágenes en S3 mediante URL prefirmada, listado/filtro de pedidos y actualización del estado.
 - **Reviews y ratings:** opiniones públicas por producto; cada usuario autenticado mantiene una sola opinión por producto, con rating entero de 1 a 5 y comentario validado por reglas de Firestore.
 - **Dashboard de analytics:** ingresos históricos agregados desde pedidos completados, pedidos pendientes, conteo de productos, barras de ingresos de los últimos 7 días y ranking por unidades en los 100 pedidos completados más recientes. El alcance del ranking se etiqueta en pantalla.
-- **Seguridad:** reglas de Firestore por usuario/rol; las órdenes no se pueden crear directamente desde el navegador; los endpoints serverless validan el token Firebase antes de operar.
-- **Testing:** Vitest, React Testing Library, wrapper de providers, pruebas del reducer, hooks y un flujo de carrito/checkout.
+- **Seguridad:** reglas de Firestore por usuario/rol; las órdenes no se pueden crear directamente desde el navegador; los endpoints serverless validan el token Firebase antes de operar. Las URLs de subida S3 firman el tamaño exacto declarado y el MIME; el bucket y CORS siguen requiriendo configuración correcta.
+- **Testing:** Vitest, React Testing Library, wrapper de providers, pruebas del reducer, hooks y un flujo de carrito/checkout. Vitest utiliza una configuración Firebase ficticia solo en modo test, de modo que no exige variables locales ni inicializa servicios externos.
 - **Deploy:** Vite SPA en Vercel y función backend en `api/s3/presign.ts`.
 
 ## Stack
@@ -241,7 +241,7 @@ npm test
 npm run build
 ```
 
-La suite cubre las acciones del reducer, tolerancia a datos corruptos en la persistencia del carrito, los hooks `useCart`/`useAuth`, el flujo de checkout con servicio mockeado, la validación de órdenes del lado del servidor y el servicio de imágenes S3 (token, URL prefirmada, rechazo de archivos grandes y lectura temporal). El comando `npm run build` empieza por `vitest run`, por lo que Vercel no puede marcar el build como exitoso si los tests fallan. La suite automatizada no sustituye las pruebas de integración contra Firebase/S3 reales.
+La suite cubre las acciones del reducer, tolerancia a datos corruptos en la persistencia del carrito, los hooks `useCart`/`useAuth`, el flujo de checkout con servicio mockeado, la validación de órdenes del lado del servidor y el servicio de imágenes S3 (token, URL prefirmada, rechazo de archivos grandes y lectura temporal). El comando `npm run build` empieza por `vitest run`, por lo que Vercel no puede marcar el build como exitoso si los tests fallan. La suite automatizada no sustituye las pruebas de integración contra Firebase/S3 reales. Después de la auditoría se reforzaron los tests sin variables locales, la creación transaccional del perfil de usuario, la validación de errores HTTP del endpoint S3 y el descuento/reposición del inventario con transacciones. El cambio de SDKs de Firebase a otra versión mayor debe hacerse con lockfile regenerado y suite completa; no se recomienda un downgrade automático sugerido por `npm audit`.
 
 ## 10. Bitácora de uso de IA
 

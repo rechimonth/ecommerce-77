@@ -29,9 +29,9 @@ export type OrderItemSnapshotForCreate = {
 };
 
 export class OrderValidationError extends Error {
-  readonly statusCode: 400 | 409;
+  readonly statusCode: 400 | 403 | 409;
 
-  constructor(message: string, statusCode: 400 | 409 = 400) {
+  constructor(message: string, statusCode: 400 | 403 | 409 = 400) {
     super(message);
     this.name = "OrderValidationError";
     this.statusCode = statusCode;

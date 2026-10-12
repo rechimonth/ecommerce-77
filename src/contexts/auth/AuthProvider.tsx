@@ -6,7 +6,7 @@ import {
   signOut as firebaseSignOut,
   updateProfile,
 } from "firebase/auth";
-import { doc, getDoc, serverTimestamp, setDoc } from "firebase/firestore";
+import { doc, getDoc, runTransaction, serverTimestamp } from "firebase/firestore";
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { auth, db, googleProvider, missingFirebaseVariables } from "../../config/firebase";
 import type { AuthContextValue, UserProfile, UserRole } from "../../types/user.types";
@@ -31,25 +31,42 @@ function assertFirebaseClientConfigured(): void {
 // Lee el perfil de Firestore; si falta, crea un perfil customer sin asignar privilegios administrativos.
 async function ensureProfile(firebaseUser: import("firebase/auth").User): Promise<UserProfile> {
   const userRef = doc(db, "users", firebaseUser.uid);
-  const snapshot = await getDoc(userRef);
-  if (!snapshot.exists()) {
-    const profile: UserProfile = {
+
+  // Transactional read/create prevents the registration function and auth listener
+  // from racing two setDoc calls against the rules for users/{uid}.
+  return runTransaction(db, async (transaction) => {
+    const snapshot = await transaction.get(userRef);
+    const email = firebaseUser.email ?? "";
+    const displayName = firebaseUser.displayName ?? "";
+
+    if (!snapshot.exists()) {
+      const profile: UserProfile = {
+        uid: firebaseUser.uid,
+        email,
+        displayName,
+        role: "customer",
+      };
+      transaction.set(userRef, { ...profile, createdAt: serverTimestamp() });
+      return profile;
+    }
+
+    const data = snapshot.data();
+    const role: UserRole = data.role === "admin" ? "admin" : "customer";
+    const nextEmail = email || (typeof data.email === "string" ? data.email : "");
+    const nextDisplayName = displayName || (typeof data.displayName === "string" ? data.displayName : "");
+
+    // Existing profiles only change fields that Firestore rules allow a user to edit.
+    if (nextEmail !== data.email || nextDisplayName !== data.displayName) {
+      transaction.update(userRef, { email: nextEmail, displayName: nextDisplayName });
+    }
+
+    return {
       uid: firebaseUser.uid,
-      email: firebaseUser.email ?? "",
-      displayName: firebaseUser.displayName ?? "",
-      role: "customer",
+      email: nextEmail,
+      displayName: nextDisplayName,
+      role,
     };
-    await setDoc(userRef, { ...profile, createdAt: serverTimestamp() });
-    return profile;
-  }
-  const data = snapshot.data();
-  const role: UserRole = data.role === "admin" ? "admin" : "customer";
-  return {
-    uid: firebaseUser.uid,
-    email: firebaseUser.email ?? data.email ?? "",
-    displayName: firebaseUser.displayName ?? data.displayName ?? "",
-    role,
-  };
+  });
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -119,16 +136,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       assertFirebaseClientConfigured();
       const credential = await createUserWithEmailAndPassword(auth, email.trim(), password);
       await updateProfile(credential.user, { displayName: name.trim() });
-      const profile: UserProfile = {
-        uid: credential.user.uid,
-        email: credential.user.email ?? email.trim(),
-        displayName: name.trim(),
-        role: "customer",
-      };
-      await setDoc(doc(db, "users", credential.user.uid), {
-        ...profile,
-        createdAt: serverTimestamp(),
-      });
+      // ensureProfile serializa la creación con el listener onAuthStateChanged y
+      // sincroniza displayName si el listener observó la cuenta antes de updateProfile.
+      const profile = await ensureProfile(credential.user);
       setProfile(profile);
     } catch (cause) {
       const actionError = toAuthOperationError(cause);
