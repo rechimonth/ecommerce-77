@@ -10,7 +10,7 @@ vi.mock("../states/LoadingState", () => ({
   LoadingState: ({ message }: { message: string }) => <p role="status">{message}</p>,
 }));
 
-function locationText() {
+function LocationText() {
   const location = useLocation();
   return <p data-testid="location">{location.pathname}</p>;
 }
@@ -33,7 +33,7 @@ function renderProtected(value: AuthContextValue, requireAdmin = false) {
   return render(
     <MemoryRouter initialEntries={["/protected"]}>
       <Routes>
-        <Route path="/login" element={<><h1>Login</h1><locationText /></>} />
+        <Route path="/login" element={<><h1>Login</h1><LocationText /></>} />
         <Route path="/products" element={<h1>Catálogo</h1>} />
         <Route path="/protected" element={<ProtectedRoute requireAdmin={requireAdmin}><h1>Contenido protegido</h1></ProtectedRoute>} />
       </Routes>

@@ -29,7 +29,7 @@ describe("ProductImage", () => {
   });
 
   it("muestra un placeholder accesible mientras se resuelve S3", () => {
-    vi.mocked(resolveProductImage).mockReturnValue(new Promise(() => undefined));
+    vi.mocked(resolveProductImage).mockReturnValue(new Promise<string>(() => undefined));
     render(<ProductImage source="s3://products/pending.jpg" alt="Pendiente" className="photo" />);
     expect(screen.getByLabelText("Pendiente")).toHaveClass("photo");
   });
@@ -51,7 +51,7 @@ describe("ProductImage", () => {
 
   it("no actualiza el estado después de desmontarse una resolución pendiente", async () => {
     let resolve!: (value: string) => void;
-    vi.mocked(resolveProductImage).mockReturnValue(new Promise((done) => { resolve = done; }));
+    vi.mocked(resolveProductImage).mockReturnValue(new Promise<string>((done) => { resolve = done; }));
     const { unmount } = render(<ProductImage source="s3://products/unmount.jpg" alt="Desmontada" />);
     unmount();
     resolve("https://signed.example.test/unmount.jpg");

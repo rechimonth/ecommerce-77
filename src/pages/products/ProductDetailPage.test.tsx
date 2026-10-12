@@ -91,7 +91,7 @@ describe("ProductDetailPage", () => {
   });
 
   it("mantiene el estado de carga mientras la consulta no termina", () => {
-    vi.mocked(getProductById).mockReturnValue(new Promise(() => undefined));
+    vi.mocked(getProductById).mockReturnValue(new Promise<Product | null>(() => undefined));
     renderPage();
     expect(screen.getByRole("status")).toHaveTextContent(/cargando producto/i);
   });
