@@ -36,11 +36,6 @@ export function ProductsPage() {
 
   return (
     <section className="space-y-6">
-      <nav aria-label="Ruta de navegación" className="flex flex-wrap items-center gap-2 text-[11px] text-neutral-500">
-        <span>Inicio</span><span aria-hidden="true">/</span><span>Hombre</span><span aria-hidden="true">/</span>
-        <span className="font-semibold text-neutral-800">Ropa</span>
-      </nav>
-
       <header className="flex flex-col gap-4 border-b border-neutral-200 pb-6 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[.18em] text-neutral-500">Rural Edition · Colección permanente</p>

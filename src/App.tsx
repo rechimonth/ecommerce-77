@@ -6,6 +6,9 @@ import { AdminLayout } from "./layouts/AdminLayout";
 
 // Las páginas se cargan bajo demanda para evitar enviar el panel admin y el checkout
 // al navegador antes de que el usuario los necesite.
+const HomePage = lazy(() =>
+  import("./pages/HomePage").then((module) => ({ default: module.HomePage })),
+);
 const AdminDashboardPage = lazy(() =>
   import("./pages/admin/AdminDashboardPage").then((module) => ({ default: module.AdminDashboardPage })),
 );
@@ -52,13 +55,13 @@ function RouteLoading() {
   );
 }
 
-// Rutas públicas, autenticadas y administrativas; Firestore y las funciones también validan permisos.
+// La raíz es la portada; el catálogo vive de forma independiente en /products.
 export default function App() {
   return (
     <Suspense fallback={<RouteLoading />}>
       <Routes>
         <Route element={<MainLayout />}>
-          <Route index element={<Navigate to="/products" replace />} />
+          <Route index element={<HomePage />} />
           <Route path="/products" element={<ProductsPage />} />
           <Route path="/products/:productId" element={<ProductDetailPage />} />
           <Route path="/cart" element={<CartPage />} />
@@ -73,7 +76,7 @@ export default function App() {
           <Route path="products" element={<AdminProductsPage />} />
           <Route path="orders" element={<AdminOrdersPage />} />
         </Route>
-        <Route path="*" element={<Navigate to="/products" replace />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Suspense>
   );
