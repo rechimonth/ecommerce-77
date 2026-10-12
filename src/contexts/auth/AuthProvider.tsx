@@ -6,7 +6,7 @@ import {
   signOut as firebaseSignOut,
   updateProfile,
 } from "firebase/auth";
-import { doc, getDoc, runTransaction, serverTimestamp } from "firebase/firestore";
+import { doc, runTransaction, serverTimestamp } from "firebase/firestore";
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { auth, db, googleProvider, missingFirebaseVariables } from "../../config/firebase";
 import type { AuthContextValue, UserProfile, UserRole } from "../../types/user.types";
