@@ -15,6 +15,39 @@ export default defineConfig(({ mode }) => ({
     "import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID": JSON.stringify("000000000000"),
     "import.meta.env.VITE_FIREBASE_APP_ID": JSON.stringify("1:000000000000:web:0000000000000000000000"),
   } : {},
+  build: {
+    // Vite 8 usa Rolldown: dividir proveedores reduce el chunk inicial y mejora su caché.
+    // Las rutas siguen lazy-loaded desde App.tsx.
+    rolldownOptions: {
+      output: {
+        codeSplitting: {
+          groups: [
+            {
+              name: "react-vendor",
+              test: /node_modules[\\/](?:react|react-dom|scheduler|react-router|react-router-dom)[\\/]/,
+              priority: 30,
+              minSize: 20000,
+              maxSize: 250000,
+            },
+            {
+              name: "firebase-vendor",
+              test: /node_modules[\\/](?:firebase|@firebase)[\\/]/,
+              priority: 20,
+              minSize: 30000,
+              maxSize: 350000,
+            },
+            {
+              name: "vendor",
+              test: /node_modules[\\/]/,
+              priority: 5,
+              minSize: 50000,
+              maxSize: 300000,
+            },
+          ],
+        },
+      },
+    },
+  },
   test: {
     environment: "jsdom",
     include: ["src/**/*.test.ts", "src/**/*.test.tsx"],

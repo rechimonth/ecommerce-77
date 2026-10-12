@@ -25,6 +25,9 @@ describe("useAuth", () => {
     expect(typeof result.current.signInWithGoogle).toBe("function");
   });
   it("falla con un mensaje claro si no está dentro de AuthProvider", () => {
+    // React registra el error esperado en console.error al renderizar un hook que lanza.
+    // Lo silenciamos solo en esta prueba negativa para mantener limpia la salida del suite.
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
     expect(() => renderHook(() => useAuth())).toThrow("useAuth debe utilizarse dentro de AuthProvider");
   });
 });
