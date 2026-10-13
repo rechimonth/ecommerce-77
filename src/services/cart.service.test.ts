@@ -35,4 +35,10 @@ describe("cart.service", () => {
     await expect(getUserCart("customer-1")).resolves.toBeNull();
     expect(firestore.doc).toHaveBeenCalledWith({ id: "test-db" }, "carts", "customer-1");
   });
+
+  it("tolera un campo items que no sea un array", async () => {
+    firestore.getDoc.mockResolvedValue(snapshot({ items: "corrupted" }));
+
+    await expect(getUserCart("customer-1")).resolves.toEqual({ items: [], total: 0 });
+  });
 });
