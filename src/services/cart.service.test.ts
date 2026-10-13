@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { CartState } from "../types/cart.types";
 
 const firestore = vi.hoisted(() => {
   class FakeTimestamp {
@@ -17,8 +18,9 @@ const firestore = vi.hoisted(() => {
 vi.mock("firebase/firestore", () => firestore);
 vi.mock("../config/firebase", () => ({ db: { id: "test-db" } }));
 
-import { getUserCart } from "./cart.service";
+import { getUserCart, saveUserCart } from "./cart.service";
 
+const cartCreatedAt = new Date("2026-01-10T12:00:00.000Z");
 const product = {
   id: "boots",
   name: "Botas",
@@ -28,7 +30,7 @@ const product = {
   price: 49.95,
   stock: 5,
   categoryId: "shoes",
-  createdAt: new Date("2026-01-10T12:00:00.000Z"),
+  createdAt: cartCreatedAt,
   updatedAt: "2026-01-11T12:00:00.000Z",
 };
 
@@ -40,6 +42,7 @@ describe("cart.service", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     firestore.doc.mockImplementation((...parts: unknown[]) => ({ path: parts.slice(1).join("/") }));
+    firestore.serverTimestamp.mockReturnValue("server-timestamp");
   });
 
   it("devuelve null cuando el usuario todavía no tiene documento de carrito", async () => {
@@ -56,13 +59,13 @@ describe("cart.service", () => {
   });
 
   it("restaura artículos válidos, convierte fechas y recalcula el total guardado", async () => {
-    const createdAt = new Date("2026-01-01T00:00:00.000Z");
+    const itemCreatedAt = new Date("2026-01-01T00:00:00.000Z");
     firestore.getDoc.mockResolvedValue(snapshot({
       total: 999999,
       items: [{
         product: {
           ...product,
-          createdAt: new firestore.Timestamp(createdAt),
+          createdAt: new firestore.Timestamp(itemCreatedAt),
           updatedAt: "2026-01-11T00:00:00.000Z",
         },
         quantity: "2",
@@ -74,7 +77,7 @@ describe("cart.service", () => {
 
     expect(result?.items).toHaveLength(1);
     expect(result?.items[0].quantity).toBe(2);
-    expect(result?.items[0].product.createdAt).toEqual(createdAt);
+    expect(result?.items[0].product.createdAt).toEqual(itemCreatedAt);
     expect(result?.items[0].product.updatedAt).toEqual(new Date("2026-01-11T00:00:00.000Z"));
     expect(result?.items[0].addedAt).toEqual(new Date("2026-01-12T00:00:00.000Z"));
     expect(result?.total).toBe(99.9);
@@ -102,5 +105,42 @@ describe("cart.service", () => {
     expect(result?.items[1].product.createdAt).toBeUndefined();
     expect(result?.items[1].product.updatedAt).toBeUndefined();
     expect(result?.total).toBe(99.9);
+  });
+
+  it("serializa solo los campos canónicos del producto y omite el total guardado", async () => {
+    const cart: CartState = {
+      items: [{
+        product: { ...product, createdAt: undefined, updatedAt: undefined },
+        quantity: 2,
+        addedAt: cartCreatedAt,
+      }],
+      total: 123456,
+    };
+    firestore.setDoc.mockResolvedValue(undefined);
+
+    await saveUserCart("customer-1", cart);
+
+    expect(firestore.setDoc).toHaveBeenCalledWith(
+      { path: "carts/customer-1" },
+      {
+        items: [{
+          product: {
+            id: "boots",
+            name: "Botas",
+            nameLower: "botas",
+            image: "https://example.test/boots.jpg",
+            description: "Botas de prueba",
+            price: 49.95,
+            stock: 5,
+            categoryId: "shoes",
+            createdAt: null,
+            updatedAt: null,
+          },
+          quantity: 2,
+          addedAt: cartCreatedAt,
+        }],
+        updatedAt: "server-timestamp",
+      },
+    );
   });
 });
