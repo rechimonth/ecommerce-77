@@ -19,6 +19,19 @@ vi.mock("../config/firebase", () => ({ db: { id: "test-db" } }));
 
 import { getUserCart } from "./cart.service";
 
+const product = {
+  id: "boots",
+  name: "Botas",
+  nameLower: "botas",
+  image: "https://example.test/boots.jpg",
+  description: "Botas de prueba",
+  price: 49.95,
+  stock: 5,
+  categoryId: "shoes",
+  createdAt: new Date("2026-01-10T12:00:00.000Z"),
+  updatedAt: "2026-01-11T12:00:00.000Z",
+};
+
 function snapshot(data: unknown, exists = true) {
   return { exists: () => exists, data: () => data };
 }
@@ -40,5 +53,30 @@ describe("cart.service", () => {
     firestore.getDoc.mockResolvedValue(snapshot({ items: "corrupted" }));
 
     await expect(getUserCart("customer-1")).resolves.toEqual({ items: [], total: 0 });
+  });
+
+  it("restaura artículos válidos, convierte fechas y recalcula el total guardado", async () => {
+    const createdAt = new Date("2026-01-01T00:00:00.000Z");
+    firestore.getDoc.mockResolvedValue(snapshot({
+      total: 999999,
+      items: [{
+        product: {
+          ...product,
+          createdAt: new firestore.Timestamp(createdAt),
+          updatedAt: "2026-01-11T00:00:00.000Z",
+        },
+        quantity: "2",
+        addedAt: "2026-01-12T00:00:00.000Z",
+      }],
+    }));
+
+    const result = await getUserCart("customer-1");
+
+    expect(result?.items).toHaveLength(1);
+    expect(result?.items[0].quantity).toBe(2);
+    expect(result?.items[0].product.createdAt).toEqual(createdAt);
+    expect(result?.items[0].product.updatedAt).toEqual(new Date("2026-01-11T00:00:00.000Z"));
+    expect(result?.items[0].addedAt).toEqual(new Date("2026-01-12T00:00:00.000Z"));
+    expect(result?.total).toBe(99.9);
   });
 });
