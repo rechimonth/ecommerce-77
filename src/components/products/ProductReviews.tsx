@@ -160,9 +160,12 @@ export function ProductReviews({ productId }: { productId: string }) {
                   })}
                 </div>
               </fieldset>
-              <label className="mt-4 block text-xs font-medium text-neutral-700">
-                Comentario
+              <div className="mt-4">
+                <label htmlFor="product-review-comment" className="block text-xs font-medium text-neutral-700">
+                  Comentario
+                </label>
                 <textarea
+                  id="product-review-comment"
                   required
                   minLength={3}
                   maxLength={500}
@@ -173,7 +176,7 @@ export function ProductReviews({ productId }: { productId: string }) {
                   className="mt-2 w-full resize-y border border-neutral-300 bg-white p-3 text-sm outline-none focus:border-neutral-900 focus:ring-1 focus:ring-neutral-900"
                 />
                 <span className="mt-1 block text-right text-[10px] text-neutral-500">{comment.length}/500</span>
-              </label>
+              </div>
               <button
                 type="submit"
                 disabled={saving || rating === 0 || comment.trim().length < 3 || comment.trim().length > 500}

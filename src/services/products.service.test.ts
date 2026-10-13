@@ -5,7 +5,7 @@ const firestore = vi.hoisted(() => {
     constructor(private readonly date: Date) {}
     toDate() { return this.date; }
   }
-  const constraint = (type: string) => (...args: unknown[]) => ({ type, args });
+  const constraint = (type: string) => vi.fn((...args: unknown[]) => ({ type, args }));
   return {
     addDoc: vi.fn(),
     collection: vi.fn(() => "products-collection"),

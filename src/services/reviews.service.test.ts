@@ -8,7 +8,7 @@ const dependencies = vi.hoisted(() => {
   return {
     firestore: {
       average: vi.fn((field: string) => ({ type: "average", field })),
-      collection: vi.fn((_db: unknown, ...parts: string[]) => ({ path: parts.join("/") }),
+      collection: vi.fn((_db: unknown, ...parts: string[]) => ({ path: parts.join("/") })),
       count: vi.fn(() => ({ type: "count" })),
       doc: vi.fn((_db: unknown, ...parts: string[]) => ({ path: parts.join("/") })),
       getAggregateFromServer: vi.fn(),

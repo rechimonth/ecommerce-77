@@ -181,6 +181,7 @@ describe("orders.service", () => {
   it("mapea un pedido individual existente", async () => {
     dependencies.firestore.getDoc.mockResolvedValue({
       exists: () => true,
+      id: "o1",
       data: () => ({ userId: "customer-a", status: "processing", total: 75, items: [] }),
     });
     await expect(getOrderById("o1")).resolves.toMatchObject({

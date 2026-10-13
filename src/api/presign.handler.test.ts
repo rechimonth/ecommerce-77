@@ -194,7 +194,7 @@ describe("api/s3/presign handler", () => {
     expect(res.statusCode).toBe(200);
     expect(res.payload).toMatchObject({
       uploadUrl: "https://s3.example.test/signed-url",
-      key: expect.stringMatching(/^products\\/admin-1\\/[0-9a-f-]+\\.png$/),
+      key: expect.stringMatching(/^products\/admin-1\/[0-9a-f-]+\.png$/),
       maxBytes: 5 * 1024 * 1024,
     });
     const command = mocks.signedUrl.getSignedUrl.mock.calls[0]?.[1] as InstanceType<typeof mocks.FakePutObjectCommand>;
