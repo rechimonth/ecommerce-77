@@ -29,7 +29,7 @@ const product = {
   description: "Botas de prueba",
   price: 49.95,
   stock: 5,
-  categoryId: "shoes",
+  categoryId: "shoes" as const,
   createdAt: cartCreatedAt,
   updatedAt: "2026-01-11T12:00:00.000Z",
 };
