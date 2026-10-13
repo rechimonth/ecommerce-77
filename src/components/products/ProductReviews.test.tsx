@@ -56,7 +56,7 @@ describe("ProductReviews", () => {
     vi.mocked(getMyProductReview).mockResolvedValue(existingReview);
     renderReviews();
 
-    expect(await screen.findByText("Muy buena calidad")).toBeInTheDocument();
+    expect(await screen.findAllByText("Muy buena calidad")).toHaveLength(2);
     expect(screen.getByLabelText("Comentario")).toHaveValue("Muy buena calidad");
     expect(screen.getByText("4.5")).toBeInTheDocument();
     expect(screen.getByText("Tu opinión")).toBeInTheDocument();
