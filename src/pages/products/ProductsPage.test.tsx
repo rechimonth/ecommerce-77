@@ -23,6 +23,7 @@ describe("ProductsPage", () => {
       isLoading: true,
       isLoadingMore: false,
       error: null,
+      cursor: null,
       hasNextPage: false,
       searchText: "",
       categoryId: "",
